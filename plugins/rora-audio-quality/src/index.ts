@@ -4,12 +4,15 @@ import { MediaItem, observe, PlayState, StyleTag } from "@luna/lib";
 import { createQualityBadge } from "./badge";
 import { QualityCache, RequestPool } from "./cache";
 import { fromCatalogMetadata, fromPlaybackContext } from "./quality";
+import { Settings } from "./SettingsPage";
+import { settings, subscribeSettings } from "./settings";
 import {
 	TRACK_ROW_SELECTOR,
 	TrackListIntegration,
 } from "./trackListIntegration";
 import type { TrackAudioQuality } from "./types";
 
+export { Settings };
 export const unloads = new Set<LunaUnload>();
 new StyleTag("RoraAudioQuality", unloads, styles);
 
@@ -33,7 +36,7 @@ const enqueueQualityLookup = async (
 
 const trackLists = new TrackListIntegration({
 	loadQuality: enqueueQualityLookup,
-	isEnabled: () => true,
+	isEnabled: () => settings.enableTrackList,
 	isDisposed: () => disposed,
 });
 
@@ -58,7 +61,7 @@ const renderNowPlaying = (): void => {
 	document
 		.querySelector(`[data-rora-quality="${NOW_PLAYING_MARKER}"]`)
 		?.remove();
-	if (disposed) return;
+	if (!settings.enableNowPlaying || disposed) return;
 	const indicator = document.querySelector<HTMLElement>(
 		"[data-test-media-state-indicator-streaming-quality]",
 	);
@@ -82,6 +85,12 @@ observe<HTMLElement>(
 	() => queueMicrotask(renderNowPlaying),
 );
 renderNowPlaying();
+
+const unsubscribe = subscribeSettings(() => {
+	trackLists.refresh();
+	renderNowPlaying();
+});
+unloads.add(unsubscribe);
 
 unloads.add(() => {
 	disposed = true;

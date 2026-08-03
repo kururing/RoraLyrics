@@ -1,3 +1,33 @@
+.rora-settings {
+	display: flex;
+	flex-direction: column;
+}
+
+.rora-setting-switch-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 20px;
+	padding: 14px 4px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rora-setting-copy {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.rora-setting-copy small {
+	opacity: 0.65;
+}
+
+.rora-setting-switch-row input {
+	width: 42px;
+	height: 22px;
+	accent-color: currentColor;
+}
+
 .rora-quality-column {
 	box-sizing: border-box;
 	flex: 0 1 156px;

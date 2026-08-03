@@ -1,15 +1,35 @@
-import { LunaSettings, LunaSwitchSetting } from "@luna/ui";
 import React from "react";
 import { NumericSettingControl } from "../components/NumericSettingControl";
 import { setSetting, settings, subscribeSettings } from "./settingsStore";
 
-type SwitchProps = React.ComponentProps<typeof LunaSwitchSetting>;
-const Switch = LunaSwitchSetting as unknown as React.ComponentType<
-	Omit<SwitchProps, "onChange"> & {
-		checked: boolean;
-		onChange: (_: unknown, checked: boolean) => void;
-	}
->;
+const LunaSettings = ({ children }: React.PropsWithChildren) => (
+	<div className="rora-settings">{children}</div>
+);
+const Switch = ({
+	title,
+	desc,
+	checked,
+	onChange,
+}: {
+	title: string;
+	desc: string;
+	checked: boolean;
+	onChange: (_: unknown, checked: boolean) => void;
+}) => (
+	<label className="rora-setting-switch-row">
+		<span className="rora-setting-copy">
+			<strong>{title}</strong>
+			<small>{desc}</small>
+		</span>
+		<input
+			type="checkbox"
+			role="switch"
+			aria-checked={checked}
+			checked={checked}
+			onChange={(event) => onChange(event, event.currentTarget.checked)}
+		/>
+	</label>
+);
 
 export const Settings = () => {
 	const [, redraw] = React.useReducer((value) => value + 1, 0);
