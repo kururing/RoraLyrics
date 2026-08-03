@@ -88,6 +88,15 @@ test("only HI_RES and MAX use the shared yellow badge variant", () => {
 	assert.doesNotMatch(getAudioQualityBadgeVariant("LOW"), /green/);
 });
 
+test("yellow badge CSS uses a stable yellow value and stronger class specificity", async () => {
+	const css = await import("node:fs/promises").then(({ readFile }) =>
+		readFile(new URL("../src/styles.css", import.meta.url), "utf8"),
+	);
+	assert.match(css, /--rora-quality-yellow-text:\s*#f5c842/);
+	assert.match(css, /\.rora-quality-badge\.rora-quality-badge--yellow\s*\{/);
+	assert.doesNotMatch(css, /wave-color-solid-accent-fill/);
+});
+
 test("catalog and current playback sources stay distinct", () => {
 	const catalog = fromCatalogMetadata("a", { audioQuality: "HI_RES_LOSSLESS" });
 	const playback = fromPlaybackContext({
