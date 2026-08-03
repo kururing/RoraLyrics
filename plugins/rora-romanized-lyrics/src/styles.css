@@ -1,0 +1,288 @@
+.rora-lyrics-host {
+	width: 100%;
+	height: 100%;
+	overflow: auto;
+	padding: 32px 7%;
+	box-sizing: border-box;
+}
+.rora-source {
+	display: inline-block;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	opacity: 0.65;
+	margin-bottom: 18px;
+}
+.rora-line {
+	display: block;
+	width: 100%;
+	border: 0;
+	background: none;
+	color: inherit;
+	text-align: left;
+	padding: calc(8px * var(--rora-spacing, 1.35)) 0;
+	cursor: pointer;
+	opacity: 0.42;
+	transition:
+		opacity 0.2s,
+		transform 0.2s;
+	line-height: 1.15;
+}
+.rora-line.rora-active {
+	opacity: 1;
+	transform: scale(1.015);
+	transform-origin: left center;
+}
+.rora-original,
+.rora-romanized {
+	display: block;
+}
+.rora-original,
+.rora-primary {
+	font-size: var(--rora-font, 30px);
+	font-weight: 700;
+}
+.rora-romanized {
+	font-size: calc(var(--rora-font, 30px) * 0.64);
+	opacity: var(--rora-opacity, 0.7);
+	margin-top: var(--rora-internal-gap, 3px);
+}
+.rora-translation {
+	display: block;
+	font-size: calc(var(--rora-font, 30px) * 0.58);
+	opacity: 0.82;
+	margin-top: var(--rora-internal-gap, 3px);
+	line-height: 1.15;
+}
+.rora-sync-button {
+	width: 100%;
+	min-height: 36px;
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	border-radius: 6px;
+	background: rgba(255, 255, 255, 0.06);
+	color: inherit;
+	cursor: pointer;
+}
+.rora-sync-button:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+.rora-lyrics-menu-button {
+	min-width: 40px;
+	height: 40px;
+	margin-left: 4px;
+	padding: 0;
+	border: 1px solid rgba(255, 255, 255, 0.24);
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.12);
+	color: inherit;
+	font: inherit;
+	font-size: 18px;
+	font-weight: 700;
+	cursor: pointer;
+	pointer-events: auto;
+	box-sizing: border-box;
+	flex: 0 0 auto;
+}
+.rora-lyrics-menu-button:hover {
+	background: rgba(255, 255, 255, 0.22);
+}
+.rora-lyrics-menu {
+	position: fixed;
+	z-index: 2147483647;
+	width: 210px;
+	padding: 8px;
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	border-radius: 10px;
+	background: #202028;
+	color: #fff;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+.rora-lyrics-menu-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	min-height: 38px;
+	padding: 0 8px;
+	font-size: 13px;
+	cursor: pointer;
+	user-select: none;
+}
+.rora-lyrics-menu-row:hover {
+	background: rgba(255, 255, 255, 0.07);
+	border-radius: 7px;
+}
+.rora-switch {
+	position: relative;
+	display: inline-flex;
+	width: 38px;
+	height: 22px;
+}
+.rora-switch input {
+	position: absolute;
+	opacity: 0;
+	pointer-events: none;
+}
+.rora-switch-track {
+	width: 100%;
+	height: 100%;
+	border-radius: 11px;
+	border: 1px solid rgba(255, 255, 255, 0.28);
+	box-sizing: border-box;
+	background: #3d3d47;
+	transition: background 0.18s ease;
+}
+.rora-switch-track::after {
+	content: "";
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: #fff;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+	transition: transform 0.18s ease;
+}
+.rora-switch input:checked + .rora-switch-track {
+	border-color: #fff;
+	background: #fff;
+}
+.rora-switch input:checked + .rora-switch-track::after {
+	transform: translateX(16px);
+	background: #17171d;
+}
+.rora-switch input:focus-visible + .rora-switch-track {
+	outline: 2px solid #fff;
+	outline-offset: 2px;
+}
+[data-test="now-playing-lyrics"] {
+	position: relative;
+}
+.rora-panel-sync-button {
+	position: fixed;
+	/* Above the lyrics surface, but below TIDAL popovers such as volume. */
+	z-index: 2147483000;
+	min-height: 40px;
+	padding: 0 18px;
+	border: 1px solid #fff;
+	border-radius: 20px;
+	background: #fff;
+	color: #17171d;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.38);
+	opacity: 1;
+	filter: none;
+}
+.rora-panel-sync-button:hover:not(:disabled) {
+	border-color: #28c7a6;
+	background: #28c7a6;
+	color: #071a16;
+	transform: translateY(-1px);
+}
+.rora-panel-sync-button:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+.rora-panel-sync-button[hidden],
+.rora-lyrics-menu-button[hidden],
+.rora-lyrics-menu[hidden] {
+	display: none;
+}
+.rora-romanized.rora-primary {
+	font-size: var(--rora-font, 30px);
+	font-weight: 700;
+	opacity: 1;
+	margin-top: 0;
+}
+.rora-timestamp {
+	font-size: 11px;
+	opacity: 0.55;
+	margin-right: 10px;
+}
+.rora-status {
+	padding: 48px 7%;
+	font-size: 18px;
+	opacity: 0.7;
+}
+.rora-quick-row {
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.rora-quick-row label {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	width: 100%;
+}
+.rora-quick-row input {
+	accent-color: currentColor;
+}
+.rora-numeric-setting {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 16px;
+	padding: 12px 0;
+}
+.rora-setting-copy {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+.rora-setting-copy small {
+	opacity: 0.65;
+}
+.rora-number-control {
+	display: flex;
+	align-items: center;
+	gap: 0;
+	position: relative;
+	z-index: 1;
+}
+.rora-number-control button,
+.rora-number-input-wrap {
+	height: 38px;
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	background: rgba(0, 0, 0, 0.14);
+	color: inherit;
+	box-sizing: border-box;
+}
+.rora-number-control button {
+	min-width: 38px;
+	cursor: pointer;
+	font-size: 18px;
+	pointer-events: auto;
+}
+.rora-number-control button:hover {
+	background: rgba(255, 255, 255, 0.1);
+}
+.rora-number-input-wrap {
+	display: flex;
+	align-items: center;
+	padding: 0 8px;
+	border-left: 0;
+	border-right: 0;
+}
+.rora-number-input-wrap input {
+	width: 68px;
+	border: 0;
+	outline: 0;
+	background: transparent;
+	color: inherit;
+	text-align: center;
+	font: inherit;
+	pointer-events: auto;
+}
+.rora-number-input-wrap span {
+	opacity: 0.6;
+	font-size: 12px;
+}
+.rora-number-control .rora-reset {
+	margin-left: 8px;
+	width: auto;
+	padding: 0 10px;
+	font-size: 12px;
+}

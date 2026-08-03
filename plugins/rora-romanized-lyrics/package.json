@@ -1,0 +1,17 @@
+{
+	"name": "@rora/romanized-lyrics",
+	"releaseVersion": "1.8.3",
+	"description": "TIDAL lyrics with local romanization for TidaLuna",
+	"author": {
+		"name": "kururing",
+		"url": "https://github.com/kururing",
+		"avatarUrl": "https://avatars.githubusercontent.com/u/134995370?v=4"
+	},
+	"main": "./src/index.ts",
+	"type": "module",
+	"dependencies": {
+		"hangul-romanization": "^1.0.1",
+		"pinyin-pro": "^3.27.0",
+		"wanakana": "^5.3.1"
+	}
+}

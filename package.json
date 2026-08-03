@@ -1,0 +1,29 @@
+{
+	"name": "rora-tidaluna-plugins",
+	"description": "Rora Romanized Lyrics and Audio Quality plugins for TidaLuna",
+	"private": true,
+	"type": "module",
+	"packageManager": "pnpm@11.1.2",
+	"scripts": {
+		"watch": "concurrently \"pnpm:build --watch\" pnpm:serve",
+		"build": "rimraf ./dist && tsx esbuild.config.ts",
+		"serve": "http-server ./dist -p 3000 -s --cors -c-1",
+		"test:rora": "node --import tsx --test plugins/*/test/*.test.ts",
+		"typecheck": "tsc -p plugins/rora-audio-quality/tsconfig.json",
+		"format": "biome format --write plugins esbuild.config.ts package.json",
+		"lint": "biome lint plugins esbuild.config.ts"
+	},
+	"devDependencies": {
+		"@types/node": "^22.15.29",
+		"@types/react": "^19.1.6",
+		"@types/react-dom": "^19.1.5",
+		"@biomejs/biome": "^2.1.1",
+		"concurrently": "^9.1.2",
+		"http-server": "^14.1.1",
+		"luna": "github:Inrixia/TidaLuna#81369c7",
+		"oby": "^15.1.2",
+		"rimraf": "^6.0.1",
+		"tsx": "^4.19.4",
+		"typescript": "^5.8.3"
+	}
+}

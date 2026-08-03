@@ -1,0 +1,13 @@
+{
+	"name": "Rora Audio Quality",
+	"releaseVersion": "0.1.1",
+	"description": "Shows honest catalog and current playback audio quality in TIDAL",
+	"homepage": "https://github.com/kururing/RoraLyrics",
+	"author": {
+		"name": "kururing",
+		"url": "https://github.com/kururing",
+		"avatarUrl": "https://avatars.githubusercontent.com/u/134995370?v=4"
+	},
+	"main": "./src/index.ts",
+	"type": "module"
+}
