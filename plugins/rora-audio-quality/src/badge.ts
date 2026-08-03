@@ -1,6 +1,7 @@
 import {
 	formatAudioQuality,
 	formatCompactAudioQuality,
+	getAudioQualityBadgeVariant,
 	qualityAriaLabel,
 	qualityTooltip,
 } from "./quality";
@@ -13,8 +14,10 @@ export const createQualityBadge = (
 ): HTMLSpanElement => {
 	const badge = document.createElement("span");
 	badge.className = "rora-quality-badge";
-	if (quality && ["LOSSLESS", "HI_RES", "MAX"].includes(quality.qualityLabel))
-		badge.classList.add("rora-quality-badge--studio");
+	const variant = getAudioQualityBadgeVariant(
+		quality?.qualityLabel ?? "UNKNOWN",
+	);
+	badge.classList.add(`rora-quality-badge--${variant}`);
 	const unknown = !quality || quality.qualityLabel === "UNKNOWN";
 	if (unknown && settings.unknownDisplay === "hide") badge.hidden = true;
 	const catalogOnly = settings.displayMode === "catalog";

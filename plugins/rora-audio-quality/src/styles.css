@@ -8,13 +8,16 @@
 }
 
 .rora-quality-badge {
+	--rora-quality-neutral-text: inherit;
+	--rora-quality-neutral-border: currentColor;
+	--rora-quality-yellow-text: var(--wave-color-solid-accent-fill, #f5c842);
+	--rora-quality-yellow-border: var(--wave-color-solid-accent-fill, #f5c842);
 	display: inline-flex;
 	align-items: center;
 	max-width: 100%;
 	padding: 2px 7px;
-	border: 1px solid currentColor;
+	border: 1px solid;
 	border-radius: 999px;
-	color: inherit;
 	font: inherit;
 	font-size: 0.75rem;
 	line-height: 1.25;
@@ -24,8 +27,16 @@
 	text-overflow: ellipsis;
 }
 
-.rora-quality-badge--studio {
-	color: #f5c842;
+.rora-quality-badge--neutral {
+	color: var(--rora-quality-neutral-text);
+	border-color: var(--rora-quality-neutral-border);
+	background: transparent;
+}
+
+.rora-quality-badge--yellow {
+	color: var(--rora-quality-yellow-text);
+	border-color: var(--rora-quality-yellow-border);
+	background: color-mix(in srgb, currentColor 8%, transparent);
 }
 
 .rora-quality-now-playing {

@@ -1,4 +1,18 @@
-import type { TrackAudioQuality } from "./types";
+import type { AudioQualityLabel, TrackAudioQuality } from "./types";
+
+export type AudioQualityBadgeVariant = "neutral" | "yellow";
+
+export const getAudioQualityBadgeVariant = (
+	qualityLabel: AudioQualityLabel,
+): AudioQualityBadgeVariant => {
+	switch (qualityLabel) {
+		case "HI_RES":
+		case "MAX":
+			return "yellow";
+		default:
+			return "neutral";
+	}
+};
 
 const positiveFinite = (value: number | null): value is number =>
 	typeof value === "number" && Number.isFinite(value) && value > 0;

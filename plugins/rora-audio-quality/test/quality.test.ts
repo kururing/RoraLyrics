@@ -7,6 +7,7 @@ import {
 	formatSampleRate,
 	fromCatalogMetadata,
 	fromPlaybackContext,
+	getAudioQualityBadgeVariant,
 	qualityTooltip,
 } from "../src/quality";
 import type { TrackAudioQuality } from "../src/types";
@@ -71,6 +72,20 @@ test("missing values fall back to honest labels and unknown dash", () => {
 
 test("MAX never implies 24-bit 192 kHz", () => {
 	assert.equal(formatAudioQuality(quality({ qualityLabel: "MAX" })), "MAX");
+});
+
+test("only HI_RES and MAX use the shared yellow badge variant", () => {
+	assert.equal(getAudioQualityBadgeVariant("LOW"), "neutral");
+	assert.equal(getAudioQualityBadgeVariant("HIGH"), "neutral");
+	assert.equal(getAudioQualityBadgeVariant("LOSSLESS"), "neutral");
+	assert.equal(getAudioQualityBadgeVariant("DOLBY_ATMOS"), "neutral");
+	assert.equal(getAudioQualityBadgeVariant("UNKNOWN"), "neutral");
+	assert.equal(getAudioQualityBadgeVariant("HI_RES"), "yellow");
+	assert.equal(getAudioQualityBadgeVariant("MAX"), "yellow");
+	assert.doesNotMatch(getAudioQualityBadgeVariant("MAX"), /orange/);
+	assert.doesNotMatch(getAudioQualityBadgeVariant("LOSSLESS"), /purple/);
+	assert.doesNotMatch(getAudioQualityBadgeVariant("HIGH"), /blue/);
+	assert.doesNotMatch(getAudioQualityBadgeVariant("LOW"), /green/);
 });
 
 test("catalog and current playback sources stay distinct", () => {
