@@ -14,11 +14,9 @@ import { integrateQuickSettings } from "./integration/radiantLyricsIntegration";
 import { romanizeLines } from "./lyrics/romanize";
 import { calculateLivePlaybackPositionMs } from "./playback/time";
 import { TidalProvider } from "./providers/tidalProvider";
-import { Settings } from "./settings/Settings";
 import { settings, subscribeSettings } from "./settings/settingsStore";
 import type { LyricsResult, TrackMetadata } from "./types/lyrics";
 
-export { Settings };
 export const unloads = new Set<LunaUnload>();
 new StyleTag("RoraRomanizedLyrics", unloads, styles);
 
