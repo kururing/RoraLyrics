@@ -9,7 +9,7 @@
 		"build": "rimraf ./dist && tsx esbuild.config.ts",
 		"serve": "http-server ./dist -p 3000 -s --cors -c-1",
 		"test:rora": "node --import tsx --test plugins/*/test/*.test.ts",
-		"typecheck": "tsc -p plugins/rora-audio-quality/tsconfig.json",
+		"typecheck": "tsc -p plugins/rora-audio-quality/tsconfig.json && tsc -p plugins/rora-romanized-lyrics/tsconfig.json",
 		"format": "biome format --write plugins esbuild.config.ts package.json",
 		"lint": "biome lint plugins esbuild.config.ts"
 	},

@@ -22,6 +22,7 @@ import {
 	normalizeNumericValue,
 	roundToPrecision,
 } from "../src/settings/numeric";
+import { selectTidalLyrics } from "../src/providers/tidalPayload";
 
 test("parses zero, tenths, hundredths and thousandths", () => {
 	const lines = parseLrc(
@@ -206,4 +207,18 @@ test("paused and seeked playback stays exact and duration is clamped", () => {
 		),
 		180_000,
 	);
+});
+
+test("TIDAL success action wins over stale normalized lyric entities", () => {
+	const selected = selectTidalLyrics(
+		{
+			trackId: "42",
+			lyrics: "fresh plain",
+			subtitles: "[00:01.00]fresh synced",
+			lyricsProvider: "TIDAL",
+		},
+		{ text: "stale plain", lrcText: "[00:01.00]stale synced" },
+	);
+	assert.equal(selected.plain, "fresh plain");
+	assert.equal(selected.synced, "[00:01.00]fresh synced");
 });

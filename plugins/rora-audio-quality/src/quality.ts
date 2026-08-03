@@ -7,6 +7,7 @@ export const getAudioQualityBadgeVariant = (
 ): AudioQualityBadgeVariant => {
 	switch (qualityLabel) {
 		case "HI_RES":
+		case "MAX":
 			return "yellow";
 		default:
 			return "neutral";
@@ -42,9 +43,34 @@ export const formatAudioQuality = (
 const labelMap: Record<string, TrackAudioQuality["qualityLabel"]> = {
 	HI_RES_LOSSLESS: "HI_RES",
 	HI_RES: "HI_RES",
+	MAX: "MAX",
+	MASTER: "MAX",
 	LOSSLESS: "LOSSLESS",
 	HIGH: "HIGH",
 	LOW: "LOW",
+};
+
+export const fromPlaybackContext = (context: {
+	actualProductId?: string;
+	actualAudioQuality?: string;
+	bitDepth?: number | null;
+	sampleRate?: number | null;
+	codec?: string | null;
+}): TrackAudioQuality | null => {
+	const trackId = String(context.actualProductId ?? "");
+	if (!trackId) return null;
+	const bitDepth = context.bitDepth ?? null;
+	const sampleRate = context.sampleRate ?? null;
+	return {
+		trackId,
+		bitDepth: positiveFinite(bitDepth) ? bitDepth : null,
+		sampleRateHz: positiveFinite(sampleRate) ? sampleRate : null,
+		codec: context.codec?.trim() || null,
+		qualityLabel: labelMap[context.actualAudioQuality ?? ""] ?? "UNKNOWN",
+		isSpatial: false,
+		source: "current-playback",
+		isConfirmed: true,
+	};
 };
 
 export const fromCatalogMetadata = (

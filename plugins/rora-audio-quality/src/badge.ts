@@ -1,5 +1,6 @@
 import {
 	formatAudioQuality,
+	formatQualityLabel,
 	getAudioQualityBadgeVariant,
 	qualityAriaLabel,
 	qualityTooltip,
@@ -8,6 +9,7 @@ import type { TrackAudioQuality } from "./types";
 
 export const createQualityBadge = (
 	quality: TrackAudioQuality | null,
+	display: "label" | "details" = "details",
 ): HTMLSpanElement => {
 	const badge = document.createElement("span");
 	badge.className = "rora-quality-badge";
@@ -21,7 +23,12 @@ export const createQualityBadge = (
 		badge.style.setProperty("border-color", "#f5c842");
 		badge.style.setProperty("background-color", "rgba(245, 200, 66, 0.08)");
 	}
-	badge.textContent = formatAudioQuality(quality);
+	badge.textContent =
+		display === "label"
+			? quality && quality.qualityLabel !== "UNKNOWN"
+				? formatQualityLabel(quality.qualityLabel)
+				: "—"
+			: formatAudioQuality(quality);
 	badge.setAttribute("aria-label", qualityAriaLabel(quality));
 	badge.title = qualityTooltip(quality);
 	return badge;

@@ -1,21 +1,27 @@
 import styles from "file://styles.css?minify";
 import type { LunaUnload } from "@luna/core";
-import { MediaItem, StyleTag } from "@luna/lib";
+import { MediaItem, observe, PlayState, StyleTag } from "@luna/lib";
 import { createQualityBadge } from "./badge";
 import { QualityCache, RequestPool } from "./cache";
-import { fromCatalogMetadata } from "./quality";
+import { fromCatalogMetadata, fromPlaybackContext } from "./quality";
+import { Settings } from "./SettingsPage";
+import { settings, subscribeSettings } from "./settings";
+import {
+	TRACK_ROW_SELECTOR,
+	TrackListIntegration,
+} from "./trackListIntegration";
 import type { TrackAudioQuality } from "./types";
 
+export { Settings };
 export const unloads = new Set<LunaUnload>();
 new StyleTag("RoraAudioQuality", unloads, styles);
 
-const HEADER_MARKER = "rora-audio-quality-header";
-const CELL_MARKER = "rora-audio-quality-cell";
+const NOW_PLAYING_MARKER = "rora-audio-quality-now-playing";
 const cache = new QualityCache();
 const requests = new RequestPool<TrackAudioQuality>(4);
 let disposed = false;
 
-const loadCatalogQuality = async (
+const enqueueQualityLookup = async (
 	trackId: string,
 ): Promise<TrackAudioQuality> => {
 	const cached = cache.get(trackId);
@@ -28,101 +34,69 @@ const loadCatalogQuality = async (
 	});
 };
 
-const ensureHeader = (trackList: Element): void => {
-	if (trackList.querySelector(`[data-rora-quality="${HEADER_MARKER}"]`)) return;
-	const time = trackList.querySelector<HTMLElement>(
-		'span[class^="_timeColumn"][role="columnheader"]',
-	);
-	if (!time?.parentElement) return;
-	const header = time.cloneNode(false) as HTMLElement;
-	header.dataset.roraQuality = HEADER_MARKER;
-	header.classList.add("rora-quality-column");
-	header.setAttribute("role", "columnheader");
-	header.setAttribute("aria-label", "Audio quality");
-	header.textContent = "QUALITY";
-	time.parentElement.insertBefore(header, time);
-};
-
-const updateRow = async (row: HTMLElement): Promise<void> => {
-	const trackId = row.getAttribute("data-track-id");
-	if (!trackId) return;
-	const duration = row.querySelector<HTMLElement>('div[data-test="duration"]');
-	if (!duration?.parentElement) return;
-	let cell = row.querySelector<HTMLElement>(
-		`[data-rora-quality="${CELL_MARKER}"]`,
-	);
-	if (!cell) {
-		cell = duration.cloneNode(false) as HTMLElement;
-		cell.dataset.roraQuality = CELL_MARKER;
-		cell.classList.add("rora-quality-column");
-		cell.setAttribute("role", "cell");
-		duration.parentElement.insertBefore(cell, duration);
-	}
-	cell.replaceChildren(createQualityBadge(null));
-	try {
-		const quality = await loadCatalogQuality(trackId);
-		if (
-			disposed ||
-			row.getAttribute("data-track-id") !== trackId ||
-			!row.isConnected
-		)
-			return;
-		cell.replaceChildren(createQualityBadge(quality));
-	} catch {
-		if (!disposed && row.getAttribute("data-track-id") === trackId)
-			cell.replaceChildren(createQualityBadge(null));
-	}
-};
-
-const processTrackList = (trackList: Element): void => {
-	ensureHeader(trackList);
-	trackList
-		.querySelectorAll<HTMLElement>('div[data-test="tracklist-row"]')
-		.forEach((row) => void updateRow(row));
-};
-
-const scanNode = (node: Node): void => {
-	if (!(node instanceof Element)) return;
-	if (node.matches('div[aria-label="Tracklist"]')) processTrackList(node);
-	node
-		.querySelectorAll('div[aria-label="Tracklist"]')
-		.forEach(processTrackList);
-	if (node.matches('div[data-test="tracklist-row"]'))
-		void updateRow(node as HTMLElement);
-};
-
-const removeTrackColumns = (): void => {
-	document
-		.querySelectorAll(
-			`[data-rora-quality="${HEADER_MARKER}"], [data-rora-quality="${CELL_MARKER}"]`,
-		)
-		.forEach((element) => {
-			element.remove();
-		});
-};
-
-const observer = new MutationObserver((mutations) => {
-	for (const mutation of mutations) {
-		if (mutation.type === "attributes") {
-			void updateRow(mutation.target as HTMLElement);
-			continue;
-		}
-		for (const node of mutation.addedNodes) scanNode(node);
-	}
+const trackLists = new TrackListIntegration({
+	loadQuality: enqueueQualityLookup,
+	isEnabled: () => settings.enableTrackList,
+	isDisposed: () => disposed,
 });
-observer.observe(document.body, {
-	subtree: true,
-	childList: true,
-	attributes: true,
-	attributeFilter: ["data-track-id"],
-});
-unloads.add(() => observer.disconnect());
+
+const mountTrackList = (trackList: HTMLElement): void => {
+	trackLists.mount(trackList);
+};
 
 document
-	.querySelectorAll('div[aria-label="Tracklist"]')
-	.forEach(processTrackList);
+	.querySelectorAll<HTMLElement>('div[aria-label="Tracklist"]')
+	.forEach(mountTrackList);
+observe<HTMLElement>(unloads, 'div[aria-label="Tracklist"]', mountTrackList);
+
+const processVisibleRow = (row: HTMLElement): void => {
+	void trackLists.processTrackRow(row);
+};
+document
+	.querySelectorAll<HTMLElement>(TRACK_ROW_SELECTOR)
+	.forEach(processVisibleRow);
+observe<HTMLElement>(unloads, TRACK_ROW_SELECTOR, processVisibleRow);
+
+const renderNowPlaying = (): void => {
+	document
+		.querySelector(`[data-rora-quality="${NOW_PLAYING_MARKER}"]`)
+		?.remove();
+	if (!settings.enableNowPlaying || disposed) return;
+	const indicator = document.querySelector<HTMLElement>(
+		"[data-test-media-state-indicator-streaming-quality]",
+	);
+	const container = indicator?.parentElement;
+	if (!container) return;
+	const quality = fromPlaybackContext(PlayState.playbackContext ?? {});
+	if (!quality) return;
+	cache.set(quality);
+	trackLists.refreshTrack(quality.trackId);
+	const host = document.createElement("span");
+	host.dataset.roraQuality = NOW_PLAYING_MARKER;
+	host.className = "rora-quality-now-playing";
+	host.replaceChildren(createQualityBadge(quality));
+	container.prepend(host);
+};
+
+MediaItem.onMediaTransition(unloads, () => queueMicrotask(renderNowPlaying));
+observe<HTMLElement>(
+	unloads,
+	"[data-test-media-state-indicator-streaming-quality]",
+	() => queueMicrotask(renderNowPlaying),
+);
+renderNowPlaying();
+
+const unsubscribe = subscribeSettings(() => {
+	trackLists.refresh();
+	renderNowPlaying();
+});
+unloads.add(unsubscribe);
 unloads.add(() => {
 	disposed = true;
-	removeTrackColumns();
+	trackLists.disconnect();
+	requests.dispose();
+	document
+		.querySelector(`[data-rora-quality="${NOW_PLAYING_MARKER}"]`)
+		?.remove();
 	cache.clear();
 });

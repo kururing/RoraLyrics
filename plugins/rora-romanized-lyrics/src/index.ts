@@ -127,8 +127,9 @@ const load = async (): Promise<void> => {
 
 // The native lyrics entity can arrive after plugin startup. Reload only after
 // TIDAL has committed its success action; this does not alter playback state.
-redux.intercept("content/LOAD_ITEM_LYRICS_SUCCESS", unloads, ({ trackId }) => {
-	if (String(trackId) !== currentPlaybackTrackId()) return;
+redux.intercept("content/LOAD_ITEM_LYRICS_SUCCESS", unloads, (payload) => {
+	provider.captureLyrics(payload);
+	if (String(payload.trackId) !== currentPlaybackTrackId()) return;
 	queueMicrotask(() => void load());
 });
 
@@ -197,6 +198,7 @@ const unsubscribe = subscribeSettings(() => {
 unloads.add(unsubscribe);
 unloads.add(() => {
 	trackToken++;
+	provider.clear();
 	panelVisibilityObserver?.disconnect();
 	view?.destroy();
 	document

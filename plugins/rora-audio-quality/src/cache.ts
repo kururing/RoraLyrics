@@ -47,29 +47,47 @@ export class QualityCache {
 
 export class RequestPool<T> {
 	private active = 0;
-	private readonly queue: Array<() => void> = [];
+	private readonly queue: Array<{
+		start: () => void;
+		reject: (reason: Error) => void;
+	}> = [];
 	private readonly pending = new Map<string, Promise<T>>();
+	private disposed = false;
 
 	constructor(private readonly concurrency = 4) {}
 
 	run(key: string, task: () => Promise<T>): Promise<T> {
+		if (this.disposed)
+			return Promise.reject(new Error("Request pool disposed"));
 		const existing = this.pending.get(key);
 		if (existing) return existing;
 		const promise = new Promise<T>((resolve, reject) => {
 			const start = () => {
+				if (this.disposed) {
+					reject(new Error("Request pool disposed"));
+					return;
+				}
 				this.active++;
 				void task()
 					.then(resolve, reject)
 					.finally(() => {
 						this.active--;
 						this.pending.delete(key);
-						this.queue.shift()?.();
+						this.queue.shift()?.start();
 					});
 			};
 			if (this.active < this.concurrency) start();
-			else this.queue.push(start);
+			else this.queue.push({ start, reject });
 		});
 		this.pending.set(key, promise);
 		return promise;
+	}
+
+	dispose(): void {
+		this.disposed = true;
+		const error = new Error("Request pool disposed");
+		for (const queued of this.queue) queued.reject(error);
+		this.queue.length = 0;
+		this.pending.clear();
 	}
 }

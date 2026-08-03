@@ -1,6 +1,6 @@
 {
 	"name": "@rora/romanized-lyrics",
-	"releaseVersion": "1.9.0",
+	"releaseVersion": "1.9.1",
 	"description": "TIDAL lyrics with local romanization for TidaLuna",
 	"author": {
 		"name": "kururing",

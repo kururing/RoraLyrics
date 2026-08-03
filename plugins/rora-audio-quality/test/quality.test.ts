@@ -6,10 +6,12 @@ import {
 	formatQualityLabel,
 	formatSampleRate,
 	fromCatalogMetadata,
+	fromPlaybackContext,
 	getAudioQualityBadgeVariant,
 	qualityTooltip,
 } from "../src/quality";
 import type { TrackAudioQuality } from "../src/types";
+import { shouldProcessTrackRow } from "../src/trackListIntegration";
 
 const quality = (
 	overrides: Partial<TrackAudioQuality> = {},
@@ -73,15 +75,83 @@ test("HI-RES catalog label never implies bit depth or sample rate", () => {
 	assert.equal(formatQualityLabel("HI_RES"), "HI-RES");
 });
 
-test("only HI_RES uses the yellow badge variant", () => {
+test("only HI_RES and MAX use the yellow badge variant", () => {
 	assert.equal(getAudioQualityBadgeVariant("LOW"), "neutral");
 	assert.equal(getAudioQualityBadgeVariant("HIGH"), "neutral");
 	assert.equal(getAudioQualityBadgeVariant("LOSSLESS"), "neutral");
 	assert.equal(getAudioQualityBadgeVariant("UNKNOWN"), "neutral");
 	assert.equal(getAudioQualityBadgeVariant("HI_RES"), "yellow");
+	assert.equal(getAudioQualityBadgeVariant("MAX"), "yellow");
 	assert.doesNotMatch(getAudioQualityBadgeVariant("LOSSLESS"), /purple/);
 	assert.doesNotMatch(getAudioQualityBadgeVariant("HIGH"), /blue/);
 	assert.doesNotMatch(getAudioQualityBadgeVariant("LOW"), /green/);
+});
+
+test("playback quality uses only confirmed playback metadata", () => {
+	const playback = fromPlaybackContext({
+		actualProductId: "a",
+		actualAudioQuality: "LOSSLESS",
+		bitDepth: 16,
+		sampleRate: 44100,
+		codec: "flac",
+	});
+	assert.equal(playback?.source, "current-playback");
+	assert.equal(playback?.isConfirmed, true);
+	assert.equal(formatAudioQuality(playback), "16-bit / 44.1 kHz");
+});
+
+test("virtualized rows process every lazy batch and recycle by track ID", () => {
+	const trackIds = Array.from({ length: 200 }, (_, index) => String(index + 1));
+	const processed = trackIds.filter((trackId) =>
+		shouldProcessTrackRow(undefined, trackId, false),
+	);
+	assert.equal(processed.length, 200);
+	assert(processed.includes("51"));
+	assert(processed.includes("100"));
+	assert(processed.includes("200"));
+	assert.equal(shouldProcessTrackRow("a", "a", true), false);
+	assert.equal(shouldProcessTrackRow("a", "b", true), true);
+	assert.equal(shouldProcessTrackRow("a", "a", false), true);
+});
+
+test("settings expose only the two user-facing controls", async () => {
+	const { readFile } = await import("node:fs/promises");
+	const settingsSource = await readFile(
+		new URL("../src/settings.ts", import.meta.url),
+		"utf8",
+	);
+	const pageSource = await readFile(
+		new URL("../src/SettingsPage.tsx", import.meta.url),
+		"utf8",
+	);
+	assert.deepEqual(
+		[
+			...settingsSource.matchAll(
+				/^\s*(enableTrackList|enableNowPlaying): boolean;/gm,
+			),
+		].map((match) => match[1]),
+		["enableTrackList", "enableNowPlaying"],
+	);
+	assert.equal((pageSource.match(/<Switch\s/g) ?? []).length, 2);
+	assert.doesNotMatch(
+		`${settingsSource}\n${pageSource}`,
+		/displayMode|showCodec|showTooltip|unknownDisplay|debugLogging|Debug logging/,
+	);
+});
+
+test("track-list integration is scoped, batched, and track-ID keyed", async () => {
+	const source = await import("node:fs/promises").then(({ readFile }) =>
+		readFile(
+			new URL("../src/trackListIntegration.ts", import.meta.url),
+			"utf8",
+		),
+	);
+	assert.match(source, /observer\.observe\(trackList/);
+	assert.match(source, /queueMicrotask/);
+	assert.match(source, /roraQualityTrackId/);
+	assert.match(source, /media-list-item/);
+	assert.match(source, /refreshTrack/);
+	assert.doesNotMatch(source, /document\.body|setInterval|\b50\b/);
 });
 
 test("yellow badge CSS uses a stable yellow value and stronger class specificity", async () => {
@@ -101,6 +171,7 @@ test("badge component applies the yellow variant inline only after typed mapping
 	assert.match(source, /variant === "yellow"/);
 	assert.match(source, /setProperty\("color", "#f5c842"\)/);
 	assert.doesNotMatch(source, /textContent\s*===\s*["']HI_RES/);
+	assert.match(source, /display === "label"/);
 });
 
 test("catalog source remains unconfirmed until playback", () => {
@@ -143,6 +214,27 @@ test("request pool deduplicates keys and enforces concurrency", async () => {
 	assert.deepEqual(results, [1, 1, 2, 3]);
 	assert.equal(calls, 3);
 	assert.ok(peak <= 2);
+});
+
+test("request pool rejects queued work during plugin cleanup", async () => {
+	const pool = new RequestPool<number>(1);
+	let release: (() => void) | undefined;
+	const active = pool.run(
+		"active",
+		() =>
+			new Promise<number>((resolve) => {
+				release = () => resolve(1);
+			}),
+	);
+	const queued = pool.run("queued", async () => 2);
+	pool.dispose();
+	await assert.rejects(queued, /disposed/);
+	release?.();
+	assert.equal(await active, 1);
+	await assert.rejects(
+		pool.run("late", async () => 3),
+		/disposed/,
+	);
 });
 
 test("tooltip contains only quality, bit depth, and sample rate", () => {

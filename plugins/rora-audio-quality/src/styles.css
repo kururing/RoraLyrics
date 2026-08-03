@@ -39,6 +39,13 @@
 	background: color-mix(in srgb, currentColor 8%, transparent);
 }
 
+.rora-quality-now-playing {
+	display: inline-flex;
+	align-items: center;
+	margin-inline-end: 8px;
+	white-space: nowrap;
+}
+
 @media (max-width: 1100px) {
 	.rora-quality-column {
 		flex-basis: 92px;
