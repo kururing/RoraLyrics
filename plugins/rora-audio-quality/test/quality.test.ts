@@ -3,11 +3,9 @@ import test from "node:test";
 import { QualityCache, RequestPool } from "../src/cache";
 import {
 	formatAudioQuality,
-	formatCompactAudioQuality,
 	formatQualityLabel,
 	formatSampleRate,
 	fromCatalogMetadata,
-	fromPlaybackContext,
 	getAudioQualityBadgeVariant,
 	qualityTooltip,
 } from "../src/quality";
@@ -44,10 +42,6 @@ test("formats confirmed bit depth and sample rate", () => {
 	assert.equal(
 		formatAudioQuality(quality({ bitDepth: 16, sampleRateHz: 44100 })),
 		"16-bit / 44.1 kHz",
-	);
-	assert.equal(
-		formatCompactAudioQuality(quality({ bitDepth: 24, sampleRateHz: 192000 })),
-		"24/192",
 	);
 });
 
@@ -109,21 +103,12 @@ test("badge component applies the yellow variant inline only after typed mapping
 	assert.doesNotMatch(source, /textContent\s*===\s*["']HI_RES/);
 });
 
-test("catalog and current playback sources stay distinct", () => {
+test("catalog source remains unconfirmed until playback", () => {
 	const catalog = fromCatalogMetadata("a", { audioQuality: "HI_RES_LOSSLESS" });
-	const playback = fromPlaybackContext({
-		actualProductId: "a",
-		actualAudioQuality: "LOSSLESS",
-		bitDepth: 16,
-		sampleRate: 44100,
-		codec: "flac",
-	});
 	assert.equal(catalog.source, "track-metadata");
 	assert.equal(catalog.qualityLabel, "HI_RES");
 	assert.equal(catalog.isConfirmed, false);
 	assert.equal(catalog.bitDepth, null);
-	assert.equal(playback?.source, "current-playback");
-	assert.equal(playback?.isConfirmed, true);
 });
 
 test("cache keys quality strictly by track ID", () => {

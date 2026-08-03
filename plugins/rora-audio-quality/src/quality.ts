@@ -39,20 +39,6 @@ export const formatAudioQuality = (
 		: formatQualityLabel(quality.qualityLabel);
 };
 
-export const formatCompactAudioQuality = (
-	quality: TrackAudioQuality | null,
-): string => {
-	if (!quality) return "—";
-	if (
-		positiveFinite(quality.bitDepth) &&
-		positiveFinite(quality.sampleRateHz)
-	) {
-		const khz = quality.sampleRateHz / 1000;
-		return `${quality.bitDepth}/${Number.isInteger(khz) ? khz.toFixed(0) : khz.toFixed(1)}`;
-	}
-	return formatAudioQuality(quality);
-};
-
 const labelMap: Record<string, TrackAudioQuality["qualityLabel"]> = {
 	HI_RES_LOSSLESS: "HI_RES",
 	HI_RES: "HI_RES",
@@ -81,29 +67,6 @@ export const fromCatalogMetadata = (
 		isSpatial: false,
 		source: "track-metadata",
 		isConfirmed: false,
-	};
-};
-
-export const fromPlaybackContext = (context: {
-	actualProductId?: string;
-	actualAudioQuality?: string;
-	bitDepth?: number | null;
-	sampleRate?: number | null;
-	codec?: string | null;
-}): TrackAudioQuality | null => {
-	const trackId = String(context.actualProductId ?? "");
-	if (!trackId) return null;
-	const bitDepth = context.bitDepth ?? null;
-	const sampleRate = context.sampleRate ?? null;
-	return {
-		trackId,
-		bitDepth: positiveFinite(bitDepth) ? bitDepth : null,
-		sampleRateHz: positiveFinite(sampleRate) ? sampleRate : null,
-		codec: context.codec?.trim() || null,
-		qualityLabel: labelMap[context.actualAudioQuality ?? ""] ?? "UNKNOWN",
-		isSpatial: false,
-		source: "current-playback",
-		isConfirmed: true,
 	};
 };
 

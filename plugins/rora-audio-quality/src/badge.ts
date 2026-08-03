@@ -1,17 +1,13 @@
 import {
 	formatAudioQuality,
-	formatCompactAudioQuality,
-	formatQualityLabel,
 	getAudioQualityBadgeVariant,
 	qualityAriaLabel,
 	qualityTooltip,
 } from "./quality";
-import { settings } from "./settings";
 import type { TrackAudioQuality } from "./types";
 
 export const createQualityBadge = (
 	quality: TrackAudioQuality | null,
-	compact = false,
 ): HTMLSpanElement => {
 	const badge = document.createElement("span");
 	badge.className = "rora-quality-badge";
@@ -25,19 +21,8 @@ export const createQualityBadge = (
 		badge.style.setProperty("border-color", "#f5c842");
 		badge.style.setProperty("background-color", "rgba(245, 200, 66, 0.08)");
 	}
-	const unknown = !quality || quality.qualityLabel === "UNKNOWN";
-	if (unknown && settings.unknownDisplay === "hide") badge.hidden = true;
-	const catalogOnly = settings.displayMode === "catalog";
-	const value =
-		catalogOnly && quality
-			? quality.qualityLabel === "UNKNOWN"
-				? "—"
-				: formatQualityLabel(quality.qualityLabel)
-			: compact || settings.displayMode === "compact"
-				? formatCompactAudioQuality(quality)
-				: formatAudioQuality(quality);
-	badge.textContent = `${value}${settings.showCodec && quality?.codec ? ` · ${quality.codec.toUpperCase()}` : ""}`;
+	badge.textContent = formatAudioQuality(quality);
 	badge.setAttribute("aria-label", qualityAriaLabel(quality));
-	if (settings.showTooltip) badge.title = qualityTooltip(quality);
+	badge.title = qualityTooltip(quality);
 	return badge;
 };

@@ -5,14 +5,6 @@
 	padding: 32px 7%;
 	box-sizing: border-box;
 }
-.rora-source {
-	display: inline-block;
-	font-size: 11px;
-	font-weight: 700;
-	letter-spacing: 0.08em;
-	opacity: 0.65;
-	margin-bottom: 18px;
-}
 .rora-line {
 	display: block;
 	width: 100%;

@@ -34,18 +34,6 @@ export const Settings = () => {
 				checked={settings.showTimestamp}
 				onChange={(_, value) => setSetting("showTimestamp", value)}
 			/>
-			<Switch
-				title="Prefer synchronized lyrics"
-				desc="Prefer timed lyrics when available"
-				checked={settings.preferSynchronized}
-				onChange={(_, value) => setSetting("preferSynchronized", value)}
-			/>
-			<Switch
-				title="Show source badge"
-				desc="Show the active lyrics provider above lyrics"
-				checked={settings.showSourceBadge}
-				onChange={(_, value) => setSetting("showSourceBadge", value)}
-			/>
 			<NumericSettingControl
 				label="Font size"
 				description="Main/original lyric size"
@@ -89,12 +77,6 @@ export const Settings = () => {
 				value={settings.syncOffsetMs}
 				onChange={(value) => setSetting("syncOffsetMs", value)}
 				onReset={() => setSetting("syncOffsetMs", 0)}
-			/>
-			<Switch
-				title="Debug logging"
-				desc="Log TIDAL lyric availability without lyric content"
-				checked={settings.debugLogging}
-				onChange={(_, value) => setSetting("debugLogging", value)}
 			/>
 		</LunaSettings>
 	);

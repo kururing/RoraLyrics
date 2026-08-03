@@ -7,13 +7,10 @@ export const settings = await ReactiveStore.getPluginStorage(
 		showOriginal: true,
 		showRomanized: true,
 		showTimestamp: false,
-		preferSynchronized: true,
-		showSourceBadge: true,
 		fontSize: 30,
 		lineSpacing: 1.35,
 		romanizedOpacity: 0.7,
 		syncOffsetMs: 0,
-		debugLogging: false,
 	},
 );
 

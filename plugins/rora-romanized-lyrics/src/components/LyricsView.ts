@@ -97,12 +97,6 @@ export class LyricsView {
 		this.buttons = [];
 		this.active = -1;
 		this.updateAppearance();
-		if (settings.showSourceBadge) {
-			const badge = document.createElement("span");
-			badge.className = "rora-source";
-			badge.textContent = result.source.toUpperCase();
-			this.element.appendChild(badge);
-		}
 		if (!settings.showOriginal && !settings.showRomanized) {
 			this.status("Enable Original or Romanized lyrics");
 			return;

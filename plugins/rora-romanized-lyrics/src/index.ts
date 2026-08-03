@@ -1,5 +1,5 @@
 import styles from "file://styles.css?minify";
-import { type LunaUnload, Tracer } from "@luna/core";
+import type { LunaUnload } from "@luna/core";
 import {
 	MediaItem,
 	observe,
@@ -20,7 +20,6 @@ import type { LyricsResult, TrackMetadata } from "./types/lyrics";
 
 export { Settings };
 export const unloads = new Set<LunaUnload>();
-export const { trace } = Tracer("[Rora Romanized Lyrics]");
 new StyleTag("RoraRomanizedLyrics", unloads, styles);
 
 const provider = new TidalProvider();
@@ -90,7 +89,7 @@ const metadata = async (): Promise<TrackMetadata | null> => {
 const render = (): void => {
 	if (!view || !result || !isCurrentResult()) return;
 	view.render({ ...result, lines: romanizeLines(result.lines) });
-	lastDisplaySignature = `${settings.showOriginal}:${settings.showRomanized}:${settings.showTimestamp}:${settings.showSourceBadge}`;
+	lastDisplaySignature = `${settings.showOriginal}:${settings.showRomanized}:${settings.showTimestamp}`;
 	syncHighlightNow();
 };
 
@@ -119,8 +118,6 @@ const load = async (): Promise<void> => {
 		resultTrackId = requestedTrackId;
 		render();
 		window.dispatchEvent(new CustomEvent("rora-sync-state"));
-		if (settings.debugLogging)
-			trace.log(`source=tidal track=${requestedTrackId}`);
 	} catch (error) {
 		if (token !== trackToken) return;
 		view?.status(error instanceof Error ? error.message : "Lyrics unavailable");
@@ -194,7 +191,7 @@ safeInterval(
 
 const unsubscribe = subscribeSettings(() => {
 	view?.updateAppearance();
-	const signature = `${settings.showOriginal}:${settings.showRomanized}:${settings.showTimestamp}:${settings.showSourceBadge}`;
+	const signature = `${settings.showOriginal}:${settings.showRomanized}:${settings.showTimestamp}`;
 	if (signature !== lastDisplaySignature) render();
 });
 unloads.add(unsubscribe);

@@ -29,6 +29,3 @@ export interface CachedTrackAudioQuality {
 	expiresAt: number;
 	cacheVersion: number;
 }
-
-export type DisplayMode = "full" | "compact" | "catalog";
-export type UnknownDisplay = "dash" | "hide";
