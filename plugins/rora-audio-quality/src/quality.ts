@@ -7,12 +7,14 @@ export const getAudioQualityBadgeVariant = (
 ): AudioQualityBadgeVariant => {
 	switch (qualityLabel) {
 		case "HI_RES":
-		case "MAX":
 			return "yellow";
 		default:
 			return "neutral";
 	}
 };
+
+export const formatQualityLabel = (label: AudioQualityLabel): string =>
+	label === "HI_RES" ? "HI-RES" : label;
 
 const positiveFinite = (value: number | null): value is number =>
 	typeof value === "number" && Number.isFinite(value) && value > 0;
@@ -32,8 +34,9 @@ export const formatAudioQuality = (
 	const sampleRate = formatSampleRate(quality.sampleRateHz);
 	if (positiveFinite(quality.bitDepth) && sampleRate)
 		return `${quality.bitDepth}-bit / ${sampleRate}`;
-	if (quality.qualityLabel === "DOLBY_ATMOS") return "ATMOS";
-	return quality.qualityLabel === "UNKNOWN" ? "—" : quality.qualityLabel;
+	return quality.qualityLabel === "UNKNOWN"
+		? "—"
+		: formatQualityLabel(quality.qualityLabel);
 };
 
 export const formatCompactAudioQuality = (
@@ -51,7 +54,7 @@ export const formatCompactAudioQuality = (
 };
 
 const labelMap: Record<string, TrackAudioQuality["qualityLabel"]> = {
-	HI_RES_LOSSLESS: "MAX",
+	HI_RES_LOSSLESS: "HI_RES",
 	HI_RES: "HI_RES",
 	LOSSLESS: "LOSSLESS",
 	HIGH: "HIGH",
@@ -62,25 +65,20 @@ export const fromCatalogMetadata = (
 	trackId: string,
 	metadata: {
 		audioQuality?: string;
-		audioModes?: string[];
 		mediaMetadata?: { tags?: string[] };
 	},
 ): TrackAudioQuality => {
 	const tags = metadata.mediaMetadata?.tags ?? [];
-	const modes = metadata.audioModes ?? [];
-	const isAtmos = tags.includes("DOLBY_ATMOS") || modes.includes("DOLBY_ATMOS");
 	const isHiRes = tags.includes("HIRES_LOSSLESS");
 	return {
 		trackId,
 		bitDepth: null,
 		sampleRateHz: null,
 		codec: null,
-		qualityLabel: isAtmos
-			? "DOLBY_ATMOS"
-			: isHiRes
-				? "MAX"
-				: (labelMap[metadata.audioQuality ?? ""] ?? "UNKNOWN"),
-		isSpatial: isAtmos || modes.includes("SONY_360RA"),
+		qualityLabel: isHiRes
+			? "HI_RES"
+			: (labelMap[metadata.audioQuality ?? ""] ?? "UNKNOWN"),
+		isSpatial: false,
 		source: "track-metadata",
 		isConfirmed: false,
 	};
@@ -89,14 +87,12 @@ export const fromCatalogMetadata = (
 export const fromPlaybackContext = (context: {
 	actualProductId?: string;
 	actualAudioQuality?: string;
-	actualAudioMode?: string;
 	bitDepth?: number | null;
 	sampleRate?: number | null;
 	codec?: string | null;
 }): TrackAudioQuality | null => {
 	const trackId = String(context.actualProductId ?? "");
 	if (!trackId) return null;
-	const isAtmos = context.actualAudioMode === "DOLBY_ATMOS";
 	const bitDepth = context.bitDepth ?? null;
 	const sampleRate = context.sampleRate ?? null;
 	return {
@@ -104,10 +100,8 @@ export const fromPlaybackContext = (context: {
 		bitDepth: positiveFinite(bitDepth) ? bitDepth : null,
 		sampleRateHz: positiveFinite(sampleRate) ? sampleRate : null,
 		codec: context.codec?.trim() || null,
-		qualityLabel: isAtmos
-			? "DOLBY_ATMOS"
-			: (labelMap[context.actualAudioQuality ?? ""] ?? "UNKNOWN"),
-		isSpatial: isAtmos || context.actualAudioMode === "SONY_360RA",
+		qualityLabel: labelMap[context.actualAudioQuality ?? ""] ?? "UNKNOWN",
+		isSpatial: false,
 		source: "current-playback",
 		isConfirmed: true,
 	};
@@ -122,17 +116,10 @@ export const qualityAriaLabel = (quality: TrackAudioQuality | null): string => {
 };
 
 export const qualityTooltip = (quality: TrackAudioQuality | null): string => {
-	if (!quality) return "Audio quality unavailable";
-	const lines = [
-		`Quality: ${formatAudioQuality(quality)}`,
-		`Catalog label: ${quality.qualityLabel === "DOLBY_ATMOS" ? "ATMOS" : quality.qualityLabel}`,
-	];
-	if (quality.codec) lines.push(`Codec: ${quality.codec.toUpperCase()}`);
-	lines.push(
-		`Source: ${quality.source === "current-playback" ? "Current playback" : "Catalog metadata"}`,
-		`Confirmed: ${quality.isConfirmed ? "Yes" : "No"}`,
-	);
-	if (!quality.isConfirmed)
-		lines.push("Exact bit depth and sample rate are available during playback");
-	return lines.join("\n");
+	if (!quality) return "Quality: —\nBit Depth: —\nSample Rate: —";
+	return [
+		`Quality: ${formatQualityLabel(quality.qualityLabel)}`,
+		`Bit Depth: ${positiveFinite(quality.bitDepth) ? `${quality.bitDepth}-bit` : "—"}`,
+		`Sample Rate: ${formatSampleRate(quality.sampleRateHz) ?? "—"}`,
+	].join("\n");
 };

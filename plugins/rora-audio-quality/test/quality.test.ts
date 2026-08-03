@@ -4,6 +4,7 @@ import { QualityCache, RequestPool } from "../src/cache";
 import {
 	formatAudioQuality,
 	formatCompactAudioQuality,
+	formatQualityLabel,
 	formatSampleRate,
 	fromCatalogMetadata,
 	fromPlaybackContext,
@@ -52,8 +53,8 @@ test("formats confirmed bit depth and sample rate", () => {
 
 test("missing values fall back to honest labels and unknown dash", () => {
 	assert.equal(
-		formatAudioQuality(quality({ bitDepth: 24, qualityLabel: "MAX" })),
-		"MAX",
+		formatAudioQuality(quality({ bitDepth: 24, qualityLabel: "HI_RES" })),
+		"HI-RES",
 	);
 	assert.equal(
 		formatAudioQuality(
@@ -70,19 +71,20 @@ test("missing values fall back to honest labels and unknown dash", () => {
 	);
 });
 
-test("MAX never implies 24-bit 192 kHz", () => {
-	assert.equal(formatAudioQuality(quality({ qualityLabel: "MAX" })), "MAX");
+test("HI-RES catalog label never implies bit depth or sample rate", () => {
+	assert.equal(
+		formatAudioQuality(quality({ qualityLabel: "HI_RES" })),
+		"HI-RES",
+	);
+	assert.equal(formatQualityLabel("HI_RES"), "HI-RES");
 });
 
-test("only HI_RES and MAX use the shared yellow badge variant", () => {
+test("only HI_RES uses the yellow badge variant", () => {
 	assert.equal(getAudioQualityBadgeVariant("LOW"), "neutral");
 	assert.equal(getAudioQualityBadgeVariant("HIGH"), "neutral");
 	assert.equal(getAudioQualityBadgeVariant("LOSSLESS"), "neutral");
-	assert.equal(getAudioQualityBadgeVariant("DOLBY_ATMOS"), "neutral");
 	assert.equal(getAudioQualityBadgeVariant("UNKNOWN"), "neutral");
 	assert.equal(getAudioQualityBadgeVariant("HI_RES"), "yellow");
-	assert.equal(getAudioQualityBadgeVariant("MAX"), "yellow");
-	assert.doesNotMatch(getAudioQualityBadgeVariant("MAX"), /orange/);
 	assert.doesNotMatch(getAudioQualityBadgeVariant("LOSSLESS"), /purple/);
 	assert.doesNotMatch(getAudioQualityBadgeVariant("HIGH"), /blue/);
 	assert.doesNotMatch(getAudioQualityBadgeVariant("LOW"), /green/);
@@ -104,7 +106,7 @@ test("badge component applies the yellow variant inline only after typed mapping
 	assert.match(source, /getAudioQualityBadgeVariant/);
 	assert.match(source, /variant === "yellow"/);
 	assert.match(source, /setProperty\("color", "#f5c842"\)/);
-	assert.doesNotMatch(source, /textContent\s*===\s*["'](?:MAX|HI_RES)/);
+	assert.doesNotMatch(source, /textContent\s*===\s*["']HI_RES/);
 });
 
 test("catalog and current playback sources stay distinct", () => {
@@ -117,7 +119,7 @@ test("catalog and current playback sources stay distinct", () => {
 		codec: "flac",
 	});
 	assert.equal(catalog.source, "track-metadata");
-	assert.equal(catalog.qualityLabel, "MAX");
+	assert.equal(catalog.qualityLabel, "HI_RES");
 	assert.equal(catalog.isConfirmed, false);
 	assert.equal(catalog.bitDepth, null);
 	assert.equal(playback?.source, "current-playback");
@@ -158,22 +160,21 @@ test("request pool deduplicates keys and enforces concurrency", async () => {
 	assert.ok(peak <= 2);
 });
 
-test("tooltip only includes real optional fields", () => {
+test("tooltip contains only quality, bit depth, and sample rate", () => {
 	const catalog = quality({ qualityLabel: "HIGH", source: "track-metadata" });
-	assert.doesNotMatch(qualityTooltip(catalog), /Codec:/);
-	assert.match(qualityTooltip(catalog), /Catalog label: HIGH/);
-	assert.match(qualityTooltip(catalog), /available during playback/);
-	assert.match(
+	assert.equal(
+		qualityTooltip(catalog),
+		"Quality: HIGH\nBit Depth: —\nSample Rate: —",
+	);
+	assert.equal(
 		qualityTooltip(
-			quality({
-				codec: "flac",
-				bitDepth: 24,
-				sampleRateHz: 96000,
-				source: "current-playback",
-				isConfirmed: true,
-			}),
+			quality({ bitDepth: 24, sampleRateHz: 96000, qualityLabel: "HI_RES" }),
 		),
-		/Codec: FLAC/,
+		"Quality: HI-RES\nBit Depth: 24-bit\nSample Rate: 96 kHz",
+	);
+	assert.doesNotMatch(
+		qualityTooltip(catalog),
+		/Codec|Source|Confirmed|Catalog/,
 	);
 });
 

@@ -1,6 +1,7 @@
 import {
 	formatAudioQuality,
 	formatCompactAudioQuality,
+	formatQualityLabel,
 	getAudioQualityBadgeVariant,
 	qualityAriaLabel,
 	qualityTooltip,
@@ -29,11 +30,9 @@ export const createQualityBadge = (
 	const catalogOnly = settings.displayMode === "catalog";
 	const value =
 		catalogOnly && quality
-			? quality.qualityLabel === "DOLBY_ATMOS"
-				? "ATMOS"
-				: quality.qualityLabel === "UNKNOWN"
-					? "—"
-					: quality.qualityLabel
+			? quality.qualityLabel === "UNKNOWN"
+				? "—"
+				: formatQualityLabel(quality.qualityLabel)
 			: compact || settings.displayMode === "compact"
 				? formatCompactAudioQuality(quality)
 				: formatAudioQuality(quality);

@@ -3,8 +3,6 @@ export type AudioQualityLabel =
 	| "HIGH"
 	| "LOSSLESS"
 	| "HI_RES"
-	| "MAX"
-	| "DOLBY_ATMOS"
 	| "UNKNOWN";
 
 export type QualitySource =
