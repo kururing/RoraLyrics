@@ -18,6 +18,12 @@ export const createQualityBadge = (
 		quality?.qualityLabel ?? "UNKNOWN",
 	);
 	badge.classList.add(`rora-quality-badge--${variant}`);
+	badge.dataset.qualityVariant = variant;
+	if (variant === "yellow") {
+		badge.style.setProperty("color", "#f5c842");
+		badge.style.setProperty("border-color", "#f5c842");
+		badge.style.setProperty("background-color", "rgba(245, 200, 66, 0.08)");
+	}
 	const unknown = !quality || quality.qualityLabel === "UNKNOWN";
 	if (unknown && settings.unknownDisplay === "hide") badge.hidden = true;
 	const catalogOnly = settings.displayMode === "catalog";

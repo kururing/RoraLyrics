@@ -97,6 +97,16 @@ test("yellow badge CSS uses a stable yellow value and stronger class specificity
 	assert.doesNotMatch(css, /wave-color-solid-accent-fill/);
 });
 
+test("badge component applies the yellow variant inline only after typed mapping", async () => {
+	const source = await import("node:fs/promises").then(({ readFile }) =>
+		readFile(new URL("../src/badge.ts", import.meta.url), "utf8"),
+	);
+	assert.match(source, /getAudioQualityBadgeVariant/);
+	assert.match(source, /variant === "yellow"/);
+	assert.match(source, /setProperty\("color", "#f5c842"\)/);
+	assert.doesNotMatch(source, /textContent\s*===\s*["'](?:MAX|HI_RES)/);
+});
+
 test("catalog and current playback sources stay distinct", () => {
 	const catalog = fromCatalogMetadata("a", { audioQuality: "HI_RES_LOSSLESS" });
 	const playback = fromPlaybackContext({
