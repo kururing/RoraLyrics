@@ -21,7 +21,7 @@ Install the development store from `http://localhost:3000/store.json`.
 The public TidaLuna store is deployed automatically from `main`:
 
 ```text
-https://kururing.github.io/RoraLyrics/store.json
+cd
 ```
 
 Paste that URL into TidaLuna's **Install from URL** field. GitHub Pages
