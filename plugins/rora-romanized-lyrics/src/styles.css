@@ -23,7 +23,9 @@
 	height: 100%;
 	overflow: auto;
 	padding: 32px 7%;
+	padding-bottom: 80px; /* THÊM: Tạo khoảng trống cho nút Sync */
 	box-sizing: border-box;
+	position: relative; /* THÊM: Để làm container cho nút absolute */
 }
 .rora-line {
 	display: block;
@@ -168,16 +170,20 @@
 	outline: 2px solid #fff;
 	outline-offset: 2px;
 }
+
+/* SỬA: Container chính của lyrics panel */
 [data-test="now-playing-lyrics"] {
 	position: relative;
+	overflow: hidden; /* THÊM: Ngăn nội dung tràn */
 }
+
+/* SỬA: Nút Sync Lyrics - Neo vào bottom của panel */
 .rora-panel-sync-button {
 	position: absolute;
 	right: 7%;
 	bottom: 24px;
-	/* Chỉ cần nổi trên nội dung lyrics trong cùng panel, không còn phải
-	   tranh z-index với toàn bộ UI của TIDAL nữa. */
-	z-index: 5;
+	/* CHỈNH SỬA: Đảm bảo nút nằm trong panel */
+	z-index: 10; /* Tăng z-index để nổi trên nội dung */
 	min-height: 40px;
 	padding: 0 18px;
 	border: 1px solid #fff;
@@ -191,27 +197,34 @@
 	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.38);
 	opacity: 1;
 	filter: none;
+	/* THÊM: Đảm bảo nút không bị ảnh hưởng bởi scroll */
+	pointer-events: auto;
+	/* THÊM: Transition mượt mà */
+	transition: all 0.2s ease;
 }
 .rora-panel-sync-button:hover:not(:disabled) {
 	border-color: #28c7a6;
 	background: #28c7a6;
 	color: #071a16;
-	transform: translateY(-1px);
+	transform: translateY(-2px);
+	box-shadow: 0 6px 20px rgba(40, 199, 166, 0.3);
 }
 .rora-panel-sync-button:disabled {
 	opacity: 0.45;
 	cursor: not-allowed;
+	transform: none !important;
 }
 .rora-panel-sync-button[hidden],
 .rora-lyrics-menu-button[hidden],
 .rora-lyrics-menu[hidden] {
-	display: none;
+	display: none !important; /* THÊM: !important để đảm bảo ẩn */
 }
+
 .rora-romanized.rora-primary {
 	font-size: var(--rora-font, 30px);
 	font-weight: 700;
 	opacity: 1;
-	margin-top: 0;
+	margin-top: 20px;
 }
 .rora-timestamp {
 	font-size: 11px;
@@ -300,4 +313,50 @@
 	width: auto;
 	padding: 0 10px;
 	font-size: 12px;
+}
+
+/* THÊM: Responsive cho mobile */
+@media (max-width: 768px) {
+	.rora-panel-sync-button {
+		right: 5%;
+		bottom: 16px;
+		min-height: 36px;
+		padding: 0 14px;
+		font-size: 12px;
+	}
+	
+	.rora-lyrics-host {
+		padding: 20px 5%;
+		padding-bottom: 70px;
+	}
+}
+
+/* THÊM: Dark mode support */
+@media (prefers-color-scheme: dark) {
+	.rora-panel-sync-button {
+		background: #2a2a35;
+		border-color: rgba(255, 255, 255, 0.3);
+		color: #fff;
+	}
+	
+	.rora-panel-sync-button:hover:not(:disabled) {
+		background: #28c7a6;
+		color: #071a16;
+	}
+}
+
+/* THÊM: Animation cho nút khi hiển thị */
+.rora-panel-sync-button:not([hidden]) {
+	animation: roraFadeIn 0.3s ease;
+}
+
+@keyframes roraFadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(10px) scale(0.95);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
 }
