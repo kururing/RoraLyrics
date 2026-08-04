@@ -118,62 +118,58 @@ export function integrateQuickSettings(
 		});
 	};
 
-	const installPanelSync = (_panel: HTMLElement): void => {
-		if (document.querySelector("body > .rora-panel-sync-button")) return;
-		const button = document.createElement("button");
-		button.type = "button";
-		button.className = "rora-panel-sync-button";
-		button.textContent = "Sync Lyrics";
-		let needed = false;
-		const update = (): void => {
-			button.disabled = !canSyncLyrics();
-			button.hidden = !needed || button.disabled;
-			if (!button.hidden) place();
-		};
-		const updateNeeded = (event: Event): void => {
-			needed =
-				(event as CustomEvent<{ needed?: boolean }>).detail?.needed === true;
+	// `.rora-lyrics-host` đã là `position: relative` (xem styles.css), nên nút
+	// được neo trực tiếp vào đó thay vì quét toàn bộ document để "đoán" vị trí
+	// các control của TIDAL — đó chính là lý do cơ chế cũ dễ vỡ mỗi khi layout
+	// thanh player của TIDAL thay đổi.
+	const installPanelSync = (panel: HTMLElement): void => {
+		const attach = (host: HTMLElement): void => {
+			if (host.querySelector(":scope > .rora-panel-sync-button")) return;
+			const button = document.createElement("button");
+			button.type = "button";
+			button.className = "rora-panel-sync-button";
+			button.textContent = "Sync Lyrics";
+			let needed = false;
+			const update = (): void => {
+				button.disabled = !canSyncLyrics();
+				button.hidden = !needed || button.disabled;
+			};
+			const updateNeeded = (event: Event): void => {
+				needed =
+					(event as CustomEvent<{ needed?: boolean }>).detail?.needed ===
+					true;
+				update();
+			};
+			button.addEventListener("click", () => {
+				if (canSyncLyrics()) onSyncLyrics();
+			});
+			host.appendChild(button);
+			window.addEventListener("rora-sync-state", update);
+			window.addEventListener("rora-sync-needed", updateNeeded);
 			update();
+			unloads.add(() => {
+				window.removeEventListener("rora-sync-state", update);
+				window.removeEventListener("rora-sync-needed", updateNeeded);
+				button.remove();
+			});
 		};
-		const place = (): void => {
-			const controls = [
-				...document.querySelectorAll<HTMLElement>("button, [role='button']"),
-			]
-				.filter((element) => element !== button)
-				.map((element) => element.getBoundingClientRect())
-				.filter(
-					(rect) =>
-						rect.width > 0 &&
-						rect.height > 0 &&
-						rect.left > window.innerWidth * 0.65 &&
-						rect.bottom > window.innerHeight - 90,
-				)
-				.sort((a, b) => a.left - b.left);
-			const firstControl = controls[0];
-			const width = button.offsetWidth || 112;
-			if (firstControl) {
-				button.style.left = `${Math.max(12, firstControl.left - width - 12)}px`;
-				button.style.top = `${firstControl.top + (firstControl.height - (button.offsetHeight || 40)) / 2}px`;
-			} else {
-				button.style.left = `${Math.max(12, window.innerWidth - width - 330)}px`;
-				button.style.top = `${window.innerHeight - 58}px`;
+		// `.rora-lyrics-host` có thể chưa tồn tại ở lần đầu panel được observe
+		// (nó được tạo bất đồng bộ bởi mount() trong index.ts), nên chờ nó
+		// xuất hiện thay vì giả định lúc nào cũng có sẵn.
+		const existingHost = panel.querySelector<HTMLElement>(".rora-lyrics-host");
+		if (existingHost) {
+			attach(existingHost);
+			return;
+		}
+		const hostObserver = new MutationObserver(() => {
+			const host = panel.querySelector<HTMLElement>(".rora-lyrics-host");
+			if (host) {
+				hostObserver.disconnect();
+				attach(host);
 			}
-		};
-		button.addEventListener("click", () => {
-			if (canSyncLyrics()) onSyncLyrics();
 		});
-		document.body.appendChild(button);
-		place();
-		window.addEventListener("resize", place);
-		window.addEventListener("rora-sync-state", update);
-		window.addEventListener("rora-sync-needed", updateNeeded);
-		update();
-		unloads.add(() => {
-			window.removeEventListener("resize", place);
-			window.removeEventListener("rora-sync-state", update);
-			window.removeEventListener("rora-sync-needed", updateNeeded);
-			button.remove();
-		});
+		hostObserver.observe(panel, { childList: true });
+		unloads.add(() => hostObserver.disconnect());
 	};
 
 	document

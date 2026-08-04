@@ -172,9 +172,12 @@
 	position: relative;
 }
 .rora-panel-sync-button {
-	position: fixed;
-	/* Above the lyrics surface, but below TIDAL popovers such as volume. */
-	z-index: 2147483000;
+	position: absolute;
+	right: 7%;
+	bottom: 24px;
+	/* Chỉ cần nổi trên nội dung lyrics trong cùng panel, không còn phải
+	   tranh z-index với toàn bộ UI của TIDAL nữa. */
+	z-index: 5;
 	min-height: 40px;
 	padding: 0 18px;
 	border: 1px solid #fff;
