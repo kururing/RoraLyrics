@@ -1,0 +1,9 @@
+{
+  "name": "Rora TIDAL MV Local",
+  "releaseVersion": "0.4.0",
+  "description": "Opens the current track's YouTube music video in a popup without touching TIDAL audio",
+  "homepage": "https://github.com/kururing/RoraLyrics",
+  "author": { "name": "kururing", "url": "https://github.com/kururing" },
+  "main": "./src/v2/main.ts",
+  "type": "module"
+}

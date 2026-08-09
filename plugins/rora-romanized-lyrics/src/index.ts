@@ -10,7 +10,7 @@ import {
 } from "@luna/lib";
 import { LyricsView } from "./components/LyricsView";
 import { observeLyricsPageLifecycle } from "./integration/lyricsPageLifecycle";
-import { integrateQuickSettings } from "./integration/radiantLyricsIntegration";
+import { integrateRoraLyrics } from "./integration/roraLyricsIntegration";
 import { romanizeLines } from "./lyrics/romanize";
 import { calculateLivePlaybackPositionMs } from "./playback/time";
 import { TidalProvider } from "./providers/tidalProvider";
@@ -164,7 +164,7 @@ observe<HTMLElement>(unloads, '[data-test="now-playing-lyrics"]', mount);
 document
 	.querySelectorAll<HTMLElement>('[data-test="now-playing-lyrics"]')
 	.forEach(mount);
-integrateQuickSettings(
+integrateRoraLyrics(
 	unloads,
 	syncLyricsFromButton,
 	canOpenCurrentLyrics,
@@ -174,6 +174,9 @@ observeLyricsPageLifecycle(unloads, {
 	onLeave: () => view?.clearActive(),
 	onEnter: () => {
 		view?.clearActive();
+		window.dispatchEvent(
+			new CustomEvent("rora-sync-needed", { detail: { needed: true } }),
+		);
 		syncHighlightNow();
 	},
 });

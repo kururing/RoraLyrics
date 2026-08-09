@@ -1,0 +1,6 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="strict-origin-when-cross-origin"><style>html,body,#player{width:100%;height:100%;margin:0;background:#222}</style></head><body><div id="player"></div><script>
+const params=new URLSearchParams(location.search),videoId=params.get("videoId"),channel=params.get("channel");
+const send=(type,data)=>parent.postMessage({source:"rora-tidal-mv",channel,type,data},"*");
+window.onYouTubeIframeAPIReady=()=>{const player=new YT.Player("player",{videoId,playerVars:{autoplay:1,playsinline:1,rel:0},events:{onReady:()=>send("ready",player.getAvailableQualityLevels?.()||[]),onError:e=>send("error",e.data)}});addEventListener("message",e=>{const m=e.data;if(!m||m.source!=="rora-tidal-mv"||m.channel!==channel)return;if(m.type==="play")player.playVideo();if(m.type==="pause")player.pauseVideo();if(m.type==="volume")player.setVolume(Number(m.data));if(m.type==="quality"&&player.setPlaybackQuality)player.setPlaybackQuality(String(m.data));});};
+const script=document.createElement("script");script.src="https://www.youtube.com/iframe_api";document.head.append(script);
+</script></body></html>

@@ -11,7 +11,7 @@ const layerControls = [
 	["showRomanized", "Romanized lyrics"],
 ] as const;
 
-export function integrateQuickSettings(
+export function integrateRoraLyrics(
 	unloads: Set<LunaUnload>,
 	onSyncLyrics: () => void,
 	canOpenLyrics: () => boolean,
@@ -84,9 +84,15 @@ export function integrateQuickSettings(
 		lyricsButton.insertAdjacentElement("afterend", menuButton);
 		document.body.appendChild(menu);
 		const updateVisibility = (): void => {
-			menuButton.hidden = !canOpenLyrics();
+			const lyricsOpen = lyricsButton.getAttribute("aria-pressed") === "true";
+			menuButton.hidden = !lyricsOpen || !canOpenLyrics();
 			if (menuButton.hidden) closeMenu();
 		};
+		const lyricsStateObserver = new MutationObserver(updateVisibility);
+		lyricsStateObserver.observe(lyricsButton, {
+			attributes: true,
+			attributeFilter: ["aria-pressed"],
+		});
 		const matchShape = (): void => {
 			const rect = lyricsButton.getBoundingClientRect();
 			if (rect.height > 0) {
@@ -110,6 +116,7 @@ export function integrateQuickSettings(
 			cancelAnimationFrame(shapeFrame);
 			unsubscribe();
 			window.removeEventListener("resize", matchShape);
+			lyricsStateObserver.disconnect();
 			window.removeEventListener("rora-sync-state", updateVisibility);
 			document.removeEventListener("click", closeMenu);
 			document.removeEventListener("keydown", closeFromEscape);
@@ -124,10 +131,11 @@ export function integrateQuickSettings(
 		button.type = "button";
 		button.className = "rora-panel-sync-button";
 		button.textContent = "Sync Lyrics";
-		let needed = false;
+		// Hiện mặc định khi panel lyrics tồn tại; sẽ tự ẩn sau khi sync đúng time.
+		let needed = true;
 		const update = (): void => {
 			button.disabled = !canSyncLyrics();
-			button.hidden = !needed || button.disabled;
+			button.hidden = !needed;
 			if (!button.hidden) place();
 		};
 		const updateNeeded = (event: Event): void => {

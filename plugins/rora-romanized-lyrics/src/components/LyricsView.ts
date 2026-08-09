@@ -11,12 +11,6 @@ const formatTime = (milliseconds: number): string => {
 	return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 };
 
-const reportSyncNeeded = (needed: boolean): void => {
-	window.dispatchEvent(
-		new CustomEvent("rora-sync-needed", { detail: { needed } }),
-	);
-};
-
 export class LyricsView {
 	readonly element = document.createElement("div");
 	private buttons: Array<HTMLButtonElement | undefined> = [];
@@ -28,7 +22,6 @@ export class LyricsView {
 		this.element.className = "rora-lyrics-host";
 		const beginManualScroll = (): void => {
 			this.lastManualScroll = performance.now();
-			reportSyncNeeded(true);
 		};
 		this.element.addEventListener("wheel", beginManualScroll, {
 			passive: true,
@@ -69,7 +62,6 @@ export class LyricsView {
 		this.buttons[this.active]?.classList.remove("rora-active");
 		this.active = -1;
 		this.lastManualScroll = 0;
-		reportSyncNeeded(false);
 	}
 	private scrollTo(index: number, behavior: ScrollBehavior): void {
 		if (this.scrollFrame !== null) cancelAnimationFrame(this.scrollFrame);
@@ -181,7 +173,6 @@ export class LyricsView {
 		behavior: ScrollBehavior,
 	): number {
 		this.lastManualScroll = 0;
-		reportSyncNeeded(false);
 		const index = findActiveLine(
 			result.lines,
 			playbackPositionMs,

@@ -8,7 +8,7 @@
 - [ ] Original/Romanized combinations: on/on, off/on, on/off, off/off
 - [ ] Toggle Original, Romanized, and Timestamp in Quick Settings
 - [ ] Confirm Settings and Quick Settings update each other
-- [ ] Radiant Line, Word, Syllable, and Sticky Lyrics modes
+- [ ] RoraLyrics Line, Word, Syllable, and Sticky Lyrics modes
 - [ ] Auto, TIDAL, and LRCLIB sources; clear cache
 - [ ] Dark and custom themes
 - [ ] Confirm display toggles create no LRCLIB request
