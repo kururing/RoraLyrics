@@ -73,6 +73,30 @@ export const fromPlaybackContext = (context: {
 	};
 };
 
+export const fromPlaybackInfo = (
+	trackId: string,
+	info: {
+		audioQuality?: string;
+		bitDepth?: number | null;
+		sampleRate?: number | null;
+		mimeType?: string | null;
+		manifest?: { codecs?: string | null };
+	},
+): TrackAudioQuality => {
+	const bitDepth = info.bitDepth ?? null;
+	const sampleRate = info.sampleRate ?? null;
+	return {
+		trackId,
+		bitDepth: positiveFinite(bitDepth) ? bitDepth : null,
+		sampleRateHz: positiveFinite(sampleRate) ? sampleRate : null,
+		codec: info.manifest?.codecs?.trim() || info.mimeType?.split("/").pop() || null,
+		qualityLabel: labelMap[info.audioQuality ?? ""] ?? "UNKNOWN",
+		isSpatial: false,
+		source: "playback-manifest",
+		isConfirmed: true,
+	};
+};
+
 export const fromCatalogMetadata = (
 	trackId: string,
 	metadata: {
@@ -105,10 +129,9 @@ export const qualityAriaLabel = (quality: TrackAudioQuality | null): string => {
 };
 
 export const qualityTooltip = (quality: TrackAudioQuality | null): string => {
-	if (!quality) return "Quality: —\nBit Depth: —\nSample Rate: —";
-	return [
-		`Quality: ${formatQualityLabel(quality.qualityLabel)}`,
-		`Bit Depth: ${positiveFinite(quality.bitDepth) ? `${quality.bitDepth}-bit` : "—"}`,
-		`Sample Rate: ${formatSampleRate(quality.sampleRateHz) ?? "—"}`,
-	].join("\n");
+	if (!quality) return "Quality unavailable";
+	const lines = [`Quality: ${formatQualityLabel(quality.qualityLabel)}`];
+	if (positiveFinite(quality.bitDepth)) lines.push(`Bit Depth: ${quality.bitDepth}-bit`);
+	if (formatSampleRate(quality.sampleRateHz)) lines.push(`Sample Rate: ${formatSampleRate(quality.sampleRateHz)}`);
+	return lines.join("\n");
 };

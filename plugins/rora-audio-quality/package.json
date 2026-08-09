@@ -1,7 +1,7 @@
 {
 	"name": "Rora Audio Quality",
-	"releaseVersion": "0.3.4",
-	"description": "Shows catalog audio quality in TIDAL track lists",
+	"releaseVersion": "0.3.10",
+	"description": "Shows exact resolved audio quality in TIDAL track lists",
 	"homepage": "https://github.com/kururing/RoraLyrics",
 	"author": {
 		"name": "kururing",

@@ -11,12 +11,21 @@ const layerControls = [
 	["showRomanized", "Romanized lyrics"],
 ] as const;
 
+export interface RoraLyricsIntegration {
+	setLyricsOpen: (open: boolean) => void;
+	setSyncNeeded: (needed: boolean) => void;
+	updateAvailability: () => void;
+}
+
 export function integrateRoraLyrics(
 	unloads: Set<LunaUnload>,
 	onSyncLyrics: () => void,
 	canOpenLyrics: () => boolean,
 	canSyncLyrics: () => boolean,
-): void {
+): RoraLyricsIntegration {
+	let lyricsOpen = false;
+	let syncNeeded = false;
+	let updateSyncButton: () => void = () => undefined;
 	const installLyricsMenu = (lyricsButton: HTMLElement): void => {
 		const parent = lyricsButton.parentElement;
 		if (!parent || parent.querySelector(":scope > .rora-lyrics-menu-button"))
@@ -104,7 +113,6 @@ export function integrateRoraLyrics(
 		};
 		const shapeFrame = requestAnimationFrame(matchShape);
 		window.addEventListener("resize", matchShape);
-		window.addEventListener("rora-sync-state", updateVisibility);
 		const unsubscribe = subscribeSettings(() => {
 			for (const [key] of layerControls) {
 				const input = inputs.get(key);
@@ -117,7 +125,6 @@ export function integrateRoraLyrics(
 			unsubscribe();
 			window.removeEventListener("resize", matchShape);
 			lyricsStateObserver.disconnect();
-			window.removeEventListener("rora-sync-state", updateVisibility);
 			document.removeEventListener("click", closeMenu);
 			document.removeEventListener("keydown", closeFromEscape);
 			menuButton.remove();
@@ -125,63 +132,61 @@ export function integrateRoraLyrics(
 		});
 	};
 
-	const installPanelSync = (_panel: HTMLElement): void => {
-		if (document.querySelector("body > .rora-panel-sync-button")) return;
+	let syncButton: HTMLButtonElement | null = null;
+	let syncButtonPlace: (() => void) | null = null;
+	let hideFromOutsideClick: ((event: MouseEvent) => void) | null = null;
+	const installPanelSync = (): void => {
+		if (syncButton?.isConnected) return;
 		const button = document.createElement("button");
 		button.type = "button";
 		button.className = "rora-panel-sync-button";
 		button.textContent = "Sync Lyrics";
-		// Hiện mặc định khi panel lyrics tồn tại; sẽ tự ẩn sau khi sync đúng time.
-		let needed = true;
-		const update = (): void => {
-			button.disabled = !canSyncLyrics();
-			button.hidden = !needed;
-			if (!button.hidden) place();
-		};
-		const updateNeeded = (event: Event): void => {
-			needed =
-				(event as CustomEvent<{ needed?: boolean }>).detail?.needed === true;
-			update();
-		};
 		const place = (): void => {
-			const controls = [
-				...document.querySelectorAll<HTMLElement>("button, [role='button']"),
-			]
+			const controls = [...document.querySelectorAll<HTMLElement>(
+				"button, [role='button']",
+			)]
 				.filter((element) => element !== button)
 				.map((element) => element.getBoundingClientRect())
 				.filter(
 					(rect) =>
 						rect.width > 0 &&
 						rect.height > 0 &&
-						rect.left > window.innerWidth * 0.65 &&
-						rect.bottom > window.innerHeight - 90,
+						rect.left > window.innerWidth * 0.8 &&
+						rect.bottom > window.innerHeight - 120,
 				)
 				.sort((a, b) => a.left - b.left);
-			const firstControl = controls[0];
+			const anchor = controls[0];
 			const width = button.offsetWidth || 112;
-			if (firstControl) {
-				button.style.left = `${Math.max(12, firstControl.left - width - 12)}px`;
-				button.style.top = `${firstControl.top + (firstControl.height - (button.offsetHeight || 40)) / 2}px`;
-			} else {
-				button.style.left = `${Math.max(12, window.innerWidth - width - 330)}px`;
-				button.style.top = `${window.innerHeight - 58}px`;
+			const height = button.offsetHeight || 40;
+			if (anchor && anchor.width > 0 && anchor.height > 0) {
+				button.style.left = `${Math.max(12, anchor.left - width - 12)}px`;
+				button.style.top = `${Math.max(12, Math.min(window.innerHeight - height - 12, anchor.top + (anchor.height - height) / 2))}px`;
+				return;
 			}
+			button.style.left = `${Math.max(12, window.innerWidth - width - 330)}px`;
+			button.style.top = `${Math.max(12, window.innerHeight - height - 20)}px`;
 		};
 		button.addEventListener("click", () => {
 			if (canSyncLyrics()) onSyncLyrics();
 		});
+		syncButton = button;
+		updateSyncButton = (): void => {
+			button.disabled = !canSyncLyrics();
+			const visible = lyricsOpen && syncNeeded && canOpenLyrics();
+			button.hidden = false;
+			button.classList.toggle("rora-sync-visible", visible);
+			if (visible) place();
+		};
 		document.body.appendChild(button);
-		place();
+		syncButtonPlace = place;
 		window.addEventListener("resize", place);
-		window.addEventListener("rora-sync-state", update);
-		window.addEventListener("rora-sync-needed", updateNeeded);
-		update();
-		unloads.add(() => {
-			window.removeEventListener("resize", place);
-			window.removeEventListener("rora-sync-state", update);
-			window.removeEventListener("rora-sync-needed", updateNeeded);
-			button.remove();
-		});
+		hideFromOutsideClick = (event: MouseEvent): void => {
+			if (event.target instanceof Node && button.contains(event.target)) return;
+			syncNeeded = false;
+			updateSyncButton();
+		};
+		document.addEventListener("click", hideFromOutsideClick, true);
+		updateSyncButton();
 	};
 
 	document
@@ -192,12 +197,27 @@ export function integrateRoraLyrics(
 		'[data-test="toggle-lyrics"]',
 		installLyricsMenu,
 	);
-	document
-		.querySelectorAll<HTMLElement>('[data-test="now-playing-lyrics"]')
-		.forEach(installPanelSync);
-	observe<HTMLElement>(
-		unloads,
-		'[data-test="now-playing-lyrics"]',
-		installPanelSync,
-	);
+	installPanelSync();
+	unloads.add(() => {
+		syncButton?.remove();
+		if (syncButtonPlace) window.removeEventListener("resize", syncButtonPlace);
+		if (hideFromOutsideClick)
+			document.removeEventListener("click", hideFromOutsideClick, true);
+		hideFromOutsideClick = null;
+		syncButtonPlace = null;
+		syncButton = null;
+		updateSyncButton = () => undefined;
+	});
+	return {
+		setLyricsOpen: (open) => {
+			lyricsOpen = open;
+			if (!open) syncNeeded = false;
+			updateSyncButton();
+		},
+		setSyncNeeded: (needed) => {
+			syncNeeded = needed;
+			updateSyncButton();
+		},
+		updateAvailability: updateSyncButton,
+	};
 }

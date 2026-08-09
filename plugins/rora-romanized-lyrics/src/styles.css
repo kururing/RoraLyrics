@@ -198,10 +198,8 @@
 
 /* ===== NÚT SYNC LYRICS ===== */
 .rora-panel-sync-button {
-	position: absolute !important;
-	right: 7%;
-	bottom: 24px;
-	z-index: 10 !important;
+	position: fixed !important;
+	z-index: 2147483000 !important;
 	min-height: 40px;
 	padding: 0 18px;
 	border: 1px solid #fff;
@@ -216,14 +214,24 @@
 	opacity: 1;
 	filter: none;
 	pointer-events: auto;
-	transition: all 0.2s ease;
+	transform: none;
+	opacity: 0;
+	visibility: hidden;
+	pointer-events: none;
+	transition: opacity 0.2s ease, visibility 0s linear 0.2s;
+}
+
+.rora-panel-sync-button.rora-sync-visible {
+	opacity: 1;
+	visibility: visible;
+	pointer-events: auto;
+	transition-delay: 0s;
 }
 
 .rora-panel-sync-button:hover:not(:disabled) {
 	border-color: #28c7a6;
 	background: #28c7a6;
 	color: #071a16;
-	transform: translateY(-2px);
 	box-shadow: 0 6px 20px rgba(40, 199, 166, 0.3);
 }
 
@@ -244,7 +252,7 @@
 	font-size: var(--rora-font, 30px);
 	font-weight: 700;
 	opacity: 1;
-	margin-top: 20px;
+	margin-top: 0;
 }
 
 .rora-timestamp {
@@ -257,6 +265,15 @@
 	padding: 48px 7%;
 	font-size: 18px;
 	opacity: 0.7;
+}
+
+.rora-instrumental-gap {
+	padding: calc(8px * var(--rora-spacing, 1.35)) 0;
+	color: inherit;
+	font-size: var(--rora-font, 30px);
+	font-weight: 700;
+	opacity: 0.42;
+	text-align: left;
 }
 
 .rora-quick-row {
@@ -378,21 +395,5 @@
 	.rora-panel-sync-button:hover:not(:disabled) {
 		background: #28c7a6;
 		color: #071a16;
-	}
-}
-
-/* Animation */
-.rora-panel-sync-button:not([hidden]) {
-	animation: roraFadeIn 0.3s ease;
-}
-
-@keyframes roraFadeIn {
-	from {
-		opacity: 0;
-		transform: translateY(10px) scale(0.95);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0) scale(1);
 	}
 }

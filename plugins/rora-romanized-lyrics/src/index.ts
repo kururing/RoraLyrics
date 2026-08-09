@@ -64,7 +64,15 @@ const syncHighlightNow = (): void => {
 const syncLyricsFromButton = (): void => {
 	if (!result || !view || !hasCurrentSyncedLyrics()) return;
 	view.synchronize(result, getLatestPlaybackPositionMs(), "smooth");
+	integration.setSyncNeeded(false);
 };
+
+const integration = integrateRoraLyrics(
+	unloads,
+	syncLyricsFromButton,
+	canOpenCurrentLyrics,
+	hasCurrentSyncedLyrics,
+);
 
 const metadata = async (): Promise<TrackMetadata | null> => {
 	const item = await MediaItem.fromPlaybackContext();
@@ -86,11 +94,12 @@ const metadata = async (): Promise<TrackMetadata | null> => {
 	};
 };
 
-const render = (): void => {
+const render = (resetToTop = false): void => {
 	if (!view || !result || !isCurrentResult()) return;
-	view.render({ ...result, lines: romanizeLines(result.lines) });
+	view.render(result);
 	lastDisplaySignature = `${settings.showOriginal}:${settings.showRomanized}:${settings.showTimestamp}`;
-	syncHighlightNow();
+	if (resetToTop) view.scrollToTop();
+	else syncHighlightNow();
 };
 
 const load = async (): Promise<void> => {
@@ -98,7 +107,7 @@ const load = async (): Promise<void> => {
 	const requestedTrackId = currentPlaybackTrackId();
 	result = null;
 	resultTrackId = "";
-	window.dispatchEvent(new CustomEvent("rora-sync-state"));
+	integration.updateAvailability();
 	view?.status("Loading TIDAL lyrics…");
 	try {
 		const track = await metadata();
@@ -114,14 +123,14 @@ const load = async (): Promise<void> => {
 			return;
 		if (!loaded.syncedLyrics && !loaded.originalLyrics && !loaded.instrumental)
 			throw new Error("Lyrics unavailable");
-		result = loaded;
+		result = { ...loaded, lines: romanizeLines(loaded.lines) };
 		resultTrackId = requestedTrackId;
-		render();
-		window.dispatchEvent(new CustomEvent("rora-sync-state"));
+		render(true);
+		integration.updateAvailability();
 	} catch (error) {
 		if (token !== trackToken) return;
 		view?.status(error instanceof Error ? error.message : "Lyrics unavailable");
-		window.dispatchEvent(new CustomEvent("rora-sync-state"));
+		integration.updateAvailability();
 	}
 };
 
@@ -143,7 +152,10 @@ const mount = (panel: HTMLElement): void => {
 	panel.querySelector(".rora-lyrics-host")?.remove();
 	view?.destroy();
 	panelVisibilityObserver?.disconnect();
-	view = new LyricsView();
+	view = new LyricsView(
+		() => integration.setSyncNeeded(true),
+		() => integration.setSyncNeeded(false),
+	);
 	panelViews.set(panel, view);
 	panel.classList.add("rora-mounted");
 	for (const child of panel.children)
@@ -156,7 +168,7 @@ const mount = (panel: HTMLElement): void => {
 		else view?.clearActive();
 	});
 	panelVisibilityObserver.observe(panel);
-	if (isCurrentResult()) render();
+	if (isCurrentResult()) void render();
 	else void load();
 };
 
@@ -164,19 +176,15 @@ observe<HTMLElement>(unloads, '[data-test="now-playing-lyrics"]', mount);
 document
 	.querySelectorAll<HTMLElement>('[data-test="now-playing-lyrics"]')
 	.forEach(mount);
-integrateRoraLyrics(
-	unloads,
-	syncLyricsFromButton,
-	canOpenCurrentLyrics,
-	hasCurrentSyncedLyrics,
-);
 observeLyricsPageLifecycle(unloads, {
-	onLeave: () => view?.clearActive(),
-	onEnter: () => {
+	onLeave: () => {
+		integration.setLyricsOpen(false);
 		view?.clearActive();
-		window.dispatchEvent(
-			new CustomEvent("rora-sync-needed", { detail: { needed: true } }),
-		);
+	},
+	onEnter: () => {
+		integration.setLyricsOpen(true);
+		view?.clearActive();
+		integration.setSyncNeeded(true);
 		syncHighlightNow();
 	},
 });
@@ -196,7 +204,7 @@ safeInterval(
 const unsubscribe = subscribeSettings(() => {
 	view?.updateAppearance();
 	const signature = `${settings.showOriginal}:${settings.showRomanized}:${settings.showTimestamp}`;
-	if (signature !== lastDisplaySignature) render();
+	if (signature !== lastDisplaySignature) void render();
 });
 unloads.add(unsubscribe);
 unloads.add(() => {

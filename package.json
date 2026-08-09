@@ -14,10 +14,10 @@
 		"lint": "biome lint plugins esbuild.config.ts"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "^2.1.1",
 		"@types/node": "^22.15.29",
 		"@types/react": "^19.1.6",
 		"@types/react-dom": "^19.1.5",
-		"@biomejs/biome": "^2.1.1",
 		"concurrently": "^9.1.2",
 		"http-server": "^14.1.1",
 		"luna": "github:Inrixia/TidaLuna#81369c7",
@@ -25,5 +25,9 @@
 		"rimraf": "^6.0.1",
 		"tsx": "^4.19.4",
 		"typescript": "^5.8.3"
+	},
+	"dependencies": {
+		"kuroshiro": "^1.2.0",
+		"kuroshiro-analyzer-kuromoji": "^1.1.0"
 	}
 }

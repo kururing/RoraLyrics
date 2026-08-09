@@ -25,6 +25,15 @@ export class QualityCache {
 	}
 
 	set(quality: TrackAudioQuality, now = Date.now()): void {
+		const existing = this.entries.get(quality.trackId);
+		// A confirmed playback format is authoritative. Catalog metadata can
+		// arrive later and must not downgrade the quality shown for the track.
+		if (
+			existing?.quality.isConfirmed &&
+			!quality.isConfirmed &&
+			existing.expiresAt > now
+		)
+			return;
 		this.entries.delete(quality.trackId);
 		this.entries.set(quality.trackId, {
 			trackId: quality.trackId,

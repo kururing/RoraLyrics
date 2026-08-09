@@ -5,7 +5,47 @@ export const HEADER_MARKER = "rora-audio-quality-header";
 export const CELL_MARKER = "rora-audio-quality-cell";
 export const ROW_TRACK_MARKER = "roraQualityTrackId";
 export const TRACK_ROW_SELECTOR =
-	'div[data-test="tracklist-row"], div[data-test="media-list-item"]';
+	'div[data-test="tracklist-row"], div[data-test="media-list-item"], div[data-test="track-row"], div[data-test="top-track-row"], tr[data-test^="tracklist-row--"], [role="row"]';
+export const TRACK_LINK_SELECTOR = 'a[href*="/track/"]';
+export const TRACK_TABLE_SELECTOR = 'table, div[aria-label="Tracklist"]';
+export const DURATION_SELECTOR =
+	'div[data-test="duration"], [data-test="track-duration"], [class*="_timeColumn"]';
+
+const findDuration = (row: HTMLElement): HTMLElement | null => {
+	const direct = row.querySelector<HTMLElement>(DURATION_SELECTOR);
+	if (direct) return direct;
+	const candidates = row.querySelectorAll<HTMLElement>(
+		'[role="cell"], div, span',
+	);
+	for (let index = candidates.length - 1; index >= 0; index--) {
+		const candidate = candidates[index];
+		if (candidate && /^\d{1,3}:\d{2}$/.test(candidate.textContent?.trim() ?? ""))
+			return candidate;
+	}
+	return null;
+};
+
+export const getTrackRowFromLink = (
+	link: HTMLAnchorElement,
+): HTMLElement | null => {
+	let candidate = link.parentElement;
+	for (let depth = 0; candidate && depth < 10; depth++) {
+		if (findDuration(candidate)) return candidate;
+		candidate = candidate.parentElement;
+	}
+	return null;
+};
+
+export const getTrackRowFromDuration = (
+	duration: HTMLElement,
+): HTMLElement | null => {
+	let candidate = duration.parentElement;
+	for (let depth = 0; candidate && depth < 12; depth++) {
+		if (getTrackId(candidate)) return candidate;
+		candidate = candidate.parentElement;
+	}
+	return null;
+};
 
 export interface TrackListIntegrationOptions {
 	loadQuality: (trackId: string) => Promise<TrackAudioQuality>;
@@ -14,10 +54,20 @@ export interface TrackListIntegrationOptions {
 }
 
 export const getTrackId = (row: HTMLElement): string | null => {
+	const href = row.querySelector<HTMLAnchorElement>('a[href*="/track/"]')?.href;
+	const fromHref = href?.match(/\/track\/(\d+)/)?.[1];
+	if (fromHref) return fromHref;
 	const direct = row.getAttribute("data-track-id");
 	if (direct) return direct;
-	const href = row.querySelector<HTMLAnchorElement>('a[href*="/track/"]')?.href;
-	return href?.match(/\/track\/(\d+)/)?.[1] ?? null;
+	const imageTest = row
+		.querySelector<HTMLElement>('[data-test^="image-container-track-"]')
+		?.getAttribute("data-test");
+	const fromImage = imageTest?.match(/image-container-track-(\d+)$/)?.[1];
+	if (fromImage) return fromImage;
+	const contextTest = row
+		.querySelector<HTMLElement>('[data-test^="tracklist-id-"]')
+		?.getAttribute("data-test");
+	return contextTest?.match(/tracklist-id-(\d+)-/)?.[1] ?? null;
 };
 
 export const shouldProcessTrackRow = (
@@ -56,10 +106,10 @@ export class TrackListIntegration {
 				}
 				if (
 					mutation.type === "attributes" &&
-					mutation.target instanceof HTMLElement &&
-					mutation.target.matches(TRACK_ROW_SELECTOR)
+					mutation.target instanceof HTMLElement
 				) {
-					this.pendingRows.add(mutation.target);
+					const row = mutation.target.closest<HTMLElement>(TRACK_ROW_SELECTOR);
+					if (row) this.pendingRows.add(row);
 				}
 				for (const node of mutation.addedNodes) this.collectRows(node);
 			}
@@ -70,7 +120,7 @@ export class TrackListIntegration {
 			childList: true,
 			subtree: true,
 			attributes: true,
-			attributeFilter: ["data-track-id"],
+			attributeFilter: ["data-track-id", "data-test"],
 		});
 		this.observers.set(trackList, observer);
 	}
@@ -102,6 +152,21 @@ export class TrackListIntegration {
 		this.queueFlush();
 	}
 
+	setPlaybackQuality(quality: TrackAudioQuality): void {
+		this.pruneRows();
+		for (const row of this.knownRows) {
+			const isCurrent =
+				getTrackId(row) === quality.trackId ||
+				row.matches('[aria-current="true"]') ||
+				row.querySelector('[data-test*="playing"], [data-test*="state-indicator"]') !== null;
+			if (!isCurrent) continue;
+			const cell = row.querySelector<HTMLElement>(
+				`[data-rora-quality="${CELL_MARKER}"]`,
+			);
+			if (cell) cell.replaceChildren(createQualityBadge(quality, "details"));
+		}
+	}
+
 	disconnect(): void {
 		for (const [trackList, observer] of this.observers) {
 			observer.disconnect();
@@ -121,10 +186,12 @@ export class TrackListIntegration {
 		const trackId = getTrackId(row);
 		if (!trackId) return;
 		this.knownRows.add(row);
-		const duration = row.querySelector<HTMLElement>(
-			'div[data-test="duration"], [data-test="track-duration"]',
-		);
+		const duration = findDuration(row);
 		if (!duration?.parentElement) return;
+		const table = row.closest<HTMLElement>(
+			'table, [role="table"], [role="grid"], div[aria-label="Tracklist"]',
+		);
+		if (table) this.ensureHeader(table);
 		let cell = row.querySelector<HTMLElement>(
 			`[data-rora-quality="${CELL_MARKER}"]`,
 		);
@@ -145,7 +212,7 @@ export class TrackListIntegration {
 			cell.setAttribute("role", "cell");
 			duration.parentElement.insertBefore(cell, duration);
 		}
-		cell.replaceChildren(createQualityBadge(null, "label"));
+		cell.replaceChildren(createQualityBadge(null, "details"));
 		try {
 			const quality = await this.options.loadQuality(trackId);
 			if (
@@ -155,14 +222,14 @@ export class TrackListIntegration {
 				row.dataset[ROW_TRACK_MARKER] !== trackId
 			)
 				return;
-			cell.replaceChildren(createQualityBadge(quality, "label"));
+			cell.replaceChildren(createQualityBadge(quality, "details"));
 		} catch {
 			if (
 				!this.options.isDisposed() &&
 				getTrackId(row) === trackId &&
 				row.dataset[ROW_TRACK_MARKER] === trackId
 			)
-				cell.replaceChildren(createQualityBadge(null, "label"));
+				cell.replaceChildren(createQualityBadge(null, "details"));
 		}
 	}
 
@@ -206,7 +273,7 @@ export class TrackListIntegration {
 		)
 			return;
 		const time = trackList.querySelector<HTMLElement>(
-			'span[class^="_timeColumn"][role="columnheader"]',
+			'thead th[class*="_timeColumn"], [class*="_timeColumn"][role="columnheader"], [data-test="track-duration-header"]',
 		);
 		if (!time?.parentElement) return;
 		const header = time.cloneNode(false) as HTMLElement;

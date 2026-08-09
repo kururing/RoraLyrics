@@ -11,6 +11,7 @@ import {
 	romanizedDisplayText,
 	romanizeLines,
 	romanizeText,
+	romanizeTextResult,
 } from "../src/lyrics/romanize";
 import {
 	calculateLivePlaybackPositionMs,
@@ -89,23 +90,37 @@ test("Chinese Romanizer preserves Pinyin tone marks and uses a versioned cache",
 	assert.match(love, /w\u01D2\s+\u00E0i\s+n\u01D0/u);
 	assert.doesNotMatch(hello, /\d/u);
 	assert.notEqual(hello, "ni hao");
-	assert.equal(ROMANIZATION_CACHE_VERSION, 2);
+	assert.equal(ROMANIZATION_CACHE_VERSION, 3);
 	assert.equal(romanizeText("\u4F60\u597D"), hello);
 });
-test("script selection prefers Kana over Chinese for a Japanese lyrics document", () => {
+test("Japanese Kana romanizes while unsupported Kanji is reported honestly", () => {
 	assert(containsChineseCharacters("\u611B"));
 	assert(containsKana("\u611B\u3057\u3066\u308B"));
 	const lines = romanizeLines([
-		{ id: "1", startTimeMs: 0, original: "\u611B\u3057\u3066\u308B" },
+		{ id: "1", startTimeMs: 0, original: "\u3057\u3066\u308B" },
 		{ id: "2", startTimeMs: 1000, original: "\u611B" },
 	]);
 	assert.match(lines[0].romanized ?? "", /shiteru/i);
 	assert.equal(lines[1].romanized, undefined);
+	assert.equal(
+		romanizeTextResult("\u611B\u3057\u3066\u308B").status,
+		"unsupported",
+	);
 });
 test("Chinese display Pinyin is not deduplicated with Hanzi or stripped to ASCII", () => {
 	const displayed = romanizeText("\u5973\u7EFF") ?? "";
 	assert(/[nl][\u01D6\u01D8\u01DA\u01DC]/u.test(displayed));
 	assert.equal(areLyricsEquivalent("\u5973\u7EFF", displayed), false);
+});
+test("mixed Chinese and Korean lyrics romanize each script in the same line", () => {
+	const displayed = romanizeText("我爱你 사랑해") ?? "";
+	assert.match(displayed, /w[ǒóòō] ài nǐ/u);
+	assert.match(displayed, /saranghae/i);
+});
+test("mixed Japanese Kana and Korean lyrics romanize both scripts", () => {
+	const displayed = romanizeText("점점 かれてくに") ?? "";
+	assert.match(displayed, /Jeomjeom/i);
+	assert.match(displayed, /karetekuni/i);
 });
 test("romanized-only display keeps Latin lines that need no conversion", () => {
 	assert.equal(romanizedDisplayText("I'm sorry", undefined), "I'm sorry");

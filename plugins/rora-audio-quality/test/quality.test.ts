@@ -7,6 +7,7 @@ import {
 	formatSampleRate,
 	fromCatalogMetadata,
 	fromPlaybackContext,
+	fromPlaybackInfo,
 	getAudioQualityBadgeVariant,
 	qualityTooltip,
 } from "../src/quality";
@@ -98,6 +99,19 @@ test("playback quality uses only confirmed playback metadata", () => {
 	assert.equal(playback?.source, "current-playback");
 	assert.equal(playback?.isConfirmed, true);
 	assert.equal(formatAudioQuality(playback), "16-bit / 44.1 kHz");
+});
+
+test("playback info exposes exact quality before playback starts", () => {
+	const resolved = fromPlaybackInfo("a", {
+		audioQuality: "HI_RES_LOSSLESS",
+		bitDepth: 24,
+		sampleRate: 96000,
+		mimeType: "audio/flac",
+		manifest: { codecs: "flac" },
+	});
+	assert.equal(resolved.source, "playback-manifest");
+	assert.equal(resolved.isConfirmed, true);
+	assert.equal(formatAudioQuality(resolved), "24-bit / 96 kHz");
 });
 
 test("virtualized rows process every lazy batch and recycle by track ID", () => {
@@ -241,7 +255,7 @@ test("tooltip contains only quality, bit depth, and sample rate", () => {
 	const catalog = quality({ qualityLabel: "HIGH", source: "track-metadata" });
 	assert.equal(
 		qualityTooltip(catalog),
-		"Quality: HIGH\nBit Depth: —\nSample Rate: —",
+		"Quality: HIGH",
 	);
 	assert.equal(
 		qualityTooltip(
@@ -260,5 +274,5 @@ test("source contains no playback write calls", async () => {
 		readFile(new URL("../src/index.ts", import.meta.url), "utf8"),
 	);
 	assert.doesNotMatch(source, /\.(?:play|pause|seek|togglePlayback)\s*\(/);
-	assert.doesNotMatch(source, /playbackInfo\s*\(|updateFormat\s*\(/);
+	assert.doesNotMatch(source, /updateFormat\s*\(/);
 });

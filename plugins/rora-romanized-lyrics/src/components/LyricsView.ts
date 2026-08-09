@@ -1,7 +1,7 @@
 import { PlayState } from "@luna/lib";
 import { capitalizeFirstLetter } from "../lyrics/displayText";
 import { findActiveLine } from "../lyrics/parseLrc";
-import { areLyricsEquivalent, romanizedDisplayText } from "../lyrics/romanize";
+import { areLyricsEquivalent } from "../lyrics/romanize";
 import { millisecondsToSeconds } from "../playback/time";
 import { settings } from "../settings/settingsStore";
 import type { LyricsResult } from "../types/lyrics";
@@ -14,14 +14,21 @@ const formatTime = (milliseconds: number): string => {
 export class LyricsView {
 	readonly element = document.createElement("div");
 	private buttons: Array<HTMLButtonElement | undefined> = [];
+	private introButton: HTMLButtonElement | null = null;
 	private active = -1;
 	private lastManualScroll = 0;
 	private automaticScrollUntil = 0;
 	private scrollFrame: number | null = null;
-	constructor() {
+	private holdAtTop = false;
+	constructor(
+		private readonly onManualScroll?: () => void,
+		private readonly onSynchronized?: () => void,
+	) {
 		this.element.className = "rora-lyrics-host";
 		const beginManualScroll = (): void => {
 			this.lastManualScroll = performance.now();
+			this.holdAtTop = false;
+			this.onManualScroll?.();
 		};
 		this.element.addEventListener("wheel", beginManualScroll, {
 			passive: true,
@@ -51,6 +58,7 @@ export class LyricsView {
 		this.element.className = "rora-lyrics-host rora-status";
 		this.element.textContent = message;
 		this.buttons = [];
+		this.introButton = null;
 	}
 	destroy(): void {
 		if (this.scrollFrame !== null) cancelAnimationFrame(this.scrollFrame);
@@ -87,6 +95,7 @@ export class LyricsView {
 		this.element.className = "rora-lyrics-host";
 		this.element.replaceChildren();
 		this.buttons = [];
+		this.introButton = null;
 		this.active = -1;
 		this.updateAppearance();
 		if (!settings.showOriginal && !settings.showRomanized) {
@@ -96,6 +105,19 @@ export class LyricsView {
 		if (result.instrumental && result.lines.length === 0) {
 			this.status("Instrumental track");
 			return;
+		}
+		if (result.lines[0]?.startTimeMs > 500) {
+			const intro = document.createElement("button");
+			intro.type = "button";
+			intro.className = "rora-line rora-instrumental-gap";
+			intro.dataset.time = String(result.lines[0].startTimeMs);
+			intro.setAttribute("aria-label", "Instrumental intro");
+			const note = document.createElement("span");
+			note.textContent = "♫";
+			intro.appendChild(note);
+			intro.addEventListener("click", () => PlayState.seek(0));
+			this.introButton = intro;
+			this.element.appendChild(intro);
 		}
 		for (const line of result.lines) {
 			const button = document.createElement("button");
@@ -116,23 +138,31 @@ export class LyricsView {
 				original.textContent = capitalizeFirstLetter(line.original);
 				button.appendChild(original);
 			}
-			const romanizedText = romanizedDisplayText(line.original, line.romanized);
 			const romanizedDuplicatesOriginal = Boolean(
 				line.romanized && areLyricsEquivalent(line.original, line.romanized),
 			);
 			const showRomanized =
 				settings.showRomanized &&
 				(!settings.showOriginal || !romanizedDuplicatesOriginal) &&
-				(Boolean(line.romanized) || !settings.showOriginal);
+				Boolean(line.romanized);
 			if (showRomanized) {
 				const romanized = document.createElement("span");
 				romanized.className = settings.showOriginal
 					? "rora-romanized"
 					: "rora-romanized rora-primary";
-				// Latin-script lines do not need romanization, but must remain visible
-				// when the Romanized layer is the only enabled layer.
-				romanized.textContent = capitalizeFirstLetter(romanizedText);
+				romanized.textContent = capitalizeFirstLetter(line.romanized ?? "");
 				button.appendChild(romanized);
+			}
+			if (
+				settings.showRomanized &&
+				!settings.showOriginal &&
+				!line.romanized &&
+				line.original.trim()
+			) {
+				const unavailable = document.createElement("span");
+				unavailable.className = "rora-romanized rora-primary";
+				unavailable.textContent = "Romanization unavailable for this script";
+				button.appendChild(unavailable);
 			}
 			if (line.translation?.trim()) {
 				const translation = document.createElement("span");
@@ -159,11 +189,27 @@ export class LyricsView {
 			playbackPositionMs,
 			settings.syncOffsetMs,
 		);
+		const introActive =
+			this.introButton !== null &&
+			playbackPositionMs < result.lines[0].startTimeMs;
+		if (
+			index === this.active &&
+			this.introButton?.classList.contains("rora-active") === introActive
+		)
+			return;
 		if (index === this.active) return;
 		this.buttons[this.active]?.classList.remove("rora-active");
 		this.active = index;
 		const current = this.buttons[index];
+		this.introButton?.classList.toggle("rora-active", introActive);
 		current?.classList.add("rora-active");
+		if (this.holdAtTop) return;
+		if (introActive) {
+			this.introButton?.scrollIntoView({ behavior: "smooth", block: "center" });
+			return;
+		}
+		if (current && performance.now() - this.lastManualScroll > 3500)
+			this.onSynchronized?.();
 		if (current && performance.now() - this.lastManualScroll > 3500)
 			this.scrollTo(index, "smooth");
 	}
@@ -173,6 +219,8 @@ export class LyricsView {
 		behavior: ScrollBehavior,
 	): number {
 		this.lastManualScroll = 0;
+		this.holdAtTop = false;
+		this.onSynchronized?.();
 		const index = findActiveLine(
 			result.lines,
 			playbackPositionMs,
@@ -181,7 +229,22 @@ export class LyricsView {
 		this.buttons[this.active]?.classList.remove("rora-active");
 		this.active = index;
 		this.buttons[index]?.classList.add("rora-active");
+		const introActive =
+			this.introButton !== null &&
+			result.lines[0] !== undefined &&
+			playbackPositionMs < result.lines[0].startTimeMs;
+		this.introButton?.classList.toggle("rora-active", introActive);
 		if (index >= 0) this.scrollTo(index, behavior);
+		else if (introActive)
+			this.introButton?.scrollIntoView({ behavior, block: "center" });
 		return index;
+	}
+	scrollToTop(): void {
+		if (this.scrollFrame !== null) cancelAnimationFrame(this.scrollFrame);
+		this.scrollFrame = null;
+		this.holdAtTop = true;
+		this.lastManualScroll = performance.now();
+		this.automaticScrollUntil = performance.now() + 150;
+		this.element.scrollTo({ top: 0, behavior: "auto" });
 	}
 }

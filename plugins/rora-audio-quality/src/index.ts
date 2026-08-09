@@ -3,11 +3,16 @@ import type { LunaUnload } from "@luna/core";
 import { MediaItem, observe, PlayState, StyleTag } from "@luna/lib";
 import { createQualityBadge } from "./badge";
 import { QualityCache, RequestPool } from "./cache";
-import { fromCatalogMetadata, fromPlaybackContext } from "./quality";
+import { fromPlaybackContext, fromPlaybackInfo } from "./quality";
 import { Settings } from "./SettingsPage";
 import { settings, subscribeSettings } from "./settings";
 import {
+	DURATION_SELECTOR,
+	getTrackRowFromLink,
+	getTrackRowFromDuration,
+	TRACK_LINK_SELECTOR,
 	TRACK_ROW_SELECTOR,
+	TRACK_TABLE_SELECTOR,
 	TrackListIntegration,
 } from "./trackListIntegration";
 import type { TrackAudioQuality } from "./types";
@@ -20,15 +25,20 @@ const NOW_PLAYING_MARKER = "rora-audio-quality-now-playing";
 const cache = new QualityCache();
 const requests = new RequestPool<TrackAudioQuality>(4);
 let disposed = false;
+let currentPlaybackQuality: TrackAudioQuality | null = null;
 
 const enqueueQualityLookup = async (
 	trackId: string,
 ): Promise<TrackAudioQuality> => {
+	if (currentPlaybackQuality?.trackId === trackId)
+		return currentPlaybackQuality;
 	const cached = cache.get(trackId);
 	if (cached) return cached;
 	return requests.run(trackId, async () => {
 		const mediaItem = await MediaItem.fromId(trackId);
-		const quality = fromCatalogMetadata(trackId, mediaItem?.tidalItem ?? {});
+		if (!mediaItem) throw new Error(`Track ${trackId} not found`);
+		const playbackInfo = await mediaItem.playbackInfo();
+		const quality = fromPlaybackInfo(trackId, playbackInfo);
 		cache.set(quality);
 		return quality;
 	});
@@ -45,9 +55,9 @@ const mountTrackList = (trackList: HTMLElement): void => {
 };
 
 document
-	.querySelectorAll<HTMLElement>('div[aria-label="Tracklist"]')
+	.querySelectorAll<HTMLElement>(TRACK_TABLE_SELECTOR)
 	.forEach(mountTrackList);
-observe<HTMLElement>(unloads, 'div[aria-label="Tracklist"]', mountTrackList);
+observe<HTMLElement>(unloads, TRACK_TABLE_SELECTOR, mountTrackList);
 
 const processVisibleRow = (row: HTMLElement): void => {
 	void trackLists.processTrackRow(row);
@@ -56,6 +66,65 @@ document
 	.querySelectorAll<HTMLElement>(TRACK_ROW_SELECTOR)
 	.forEach(processVisibleRow);
 observe<HTMLElement>(unloads, TRACK_ROW_SELECTOR, processVisibleRow);
+
+const processTrackLink = (link: HTMLAnchorElement): void => {
+	const row = getTrackRowFromLink(link);
+	if (row) void trackLists.processTrackRow(row);
+};
+document
+	.querySelectorAll<HTMLAnchorElement>(TRACK_LINK_SELECTOR)
+	.forEach(processTrackLink);
+observe<HTMLAnchorElement>(unloads, TRACK_LINK_SELECTOR, processTrackLink);
+
+const processDuration = (duration: HTMLElement): void => {
+	const row = getTrackRowFromDuration(duration);
+	if (row) void trackLists.processTrackRow(row);
+};
+document
+	.querySelectorAll<HTMLElement>(DURATION_SELECTOR)
+	.forEach(processDuration);
+observe<HTMLElement>(unloads, DURATION_SELECTOR, processDuration);
+
+const refreshTimers = new Set<number>();
+const rescanVisibleTracks = (): void => {
+	if (disposed) return;
+	trackLists.refresh();
+	document
+		.querySelectorAll<HTMLElement>(TRACK_ROW_SELECTOR)
+		.forEach(processVisibleRow);
+	document
+		.querySelectorAll<HTMLElement>(DURATION_SELECTOR)
+		.forEach(processDuration);
+};
+
+const scheduleListRefresh = (): void => {
+	// Recommended tracks are committed in multiple React renders. Rescan after
+	// both the immediate replacement and the following asynchronous data render.
+	for (const delay of [0, 250, 800]) {
+		const timer = window.setTimeout(() => {
+			refreshTimers.delete(timer);
+			rescanVisibleTracks();
+		}, delay);
+		refreshTimers.add(timer);
+	}
+};
+
+const onDocumentClick = (event: MouseEvent): void => {
+	const button =
+		event.target instanceof Element ? event.target.closest("button") : null;
+	if (!button) return;
+	const label = `${button.textContent ?? ""} ${button.getAttribute("aria-label") ?? ""} ${button.getAttribute("data-test") ?? ""}`
+		.trim()
+		.toLowerCase();
+	if (label.includes("refresh list") || label.includes("refresh-list"))
+		scheduleListRefresh();
+};
+document.addEventListener("click", onDocumentClick, true);
+unloads.add(() => {
+	document.removeEventListener("click", onDocumentClick, true);
+	for (const timer of refreshTimers) window.clearTimeout(timer);
+	refreshTimers.clear();
+});
 
 const renderNowPlaying = (): void => {
 	document
@@ -69,8 +138,10 @@ const renderNowPlaying = (): void => {
 	if (!container) return;
 	const quality = fromPlaybackContext(PlayState.playbackContext ?? {});
 	if (!quality) return;
+	currentPlaybackQuality = quality;
 	cache.set(quality);
 	trackLists.refreshTrack(quality.trackId);
+	trackLists.setPlaybackQuality(quality);
 	const host = document.createElement("span");
 	host.dataset.roraQuality = NOW_PLAYING_MARKER;
 	host.className = "rora-quality-now-playing";
@@ -100,4 +171,5 @@ unloads.add(() => {
 		.querySelector(`[data-rora-quality="${NOW_PLAYING_MARKER}"]`)
 		?.remove();
 	cache.clear();
+	currentPlaybackQuality = null;
 });
