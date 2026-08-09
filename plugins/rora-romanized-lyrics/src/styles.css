@@ -23,8 +23,11 @@
 	height: 100%;
 	overflow: auto;
 	padding: 32px 7%;
+	padding-bottom: 80px; /* Tạo khoảng trống cho nút */
 	box-sizing: border-box;
+	position: relative;
 }
+
 .rora-line {
 	display: block;
 	width: 100%;
@@ -40,25 +43,30 @@
 		transform 0.2s;
 	line-height: 1.15;
 }
+
 .rora-line.rora-active {
 	opacity: 1;
 	transform: scale(1.015);
 	transform-origin: left center;
 }
+
 .rora-original,
 .rora-romanized {
 	display: block;
 }
+
 .rora-original,
 .rora-primary {
 	font-size: var(--rora-font, 30px);
 	font-weight: 700;
 }
+
 .rora-romanized {
 	font-size: calc(var(--rora-font, 30px) * 0.64);
 	opacity: var(--rora-opacity, 0.7);
 	margin-top: var(--rora-internal-gap, 3px);
 }
+
 .rora-translation {
 	display: block;
 	font-size: calc(var(--rora-font, 30px) * 0.58);
@@ -66,6 +74,7 @@
 	margin-top: var(--rora-internal-gap, 3px);
 	line-height: 1.15;
 }
+
 .rora-sync-button {
 	width: 100%;
 	min-height: 36px;
@@ -75,10 +84,12 @@
 	color: inherit;
 	cursor: pointer;
 }
+
 .rora-sync-button:disabled {
 	opacity: 0.45;
 	cursor: not-allowed;
 }
+
 .rora-lyrics-menu-button {
 	min-width: 40px;
 	height: 40px;
@@ -96,9 +107,11 @@
 	box-sizing: border-box;
 	flex: 0 0 auto;
 }
+
 .rora-lyrics-menu-button:hover {
 	background: rgba(255, 255, 255, 0.22);
 }
+
 .rora-lyrics-menu {
 	position: fixed;
 	z-index: 2147483647;
@@ -110,6 +123,7 @@
 	color: #fff;
 	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
+
 .rora-lyrics-menu-row {
 	display: flex;
 	align-items: center;
@@ -120,21 +134,25 @@
 	cursor: pointer;
 	user-select: none;
 }
+
 .rora-lyrics-menu-row:hover {
 	background: rgba(255, 255, 255, 0.07);
 	border-radius: 7px;
 }
+
 .rora-switch {
 	position: relative;
 	display: inline-flex;
 	width: 38px;
 	height: 22px;
 }
+
 .rora-switch input {
 	position: absolute;
 	opacity: 0;
 	pointer-events: none;
 }
+
 .rora-switch-track {
 	width: 100%;
 	height: 100%;
@@ -144,6 +162,7 @@
 	background: #3d3d47;
 	transition: background 0.18s ease;
 }
+
 .rora-switch-track::after {
 	content: "";
 	position: absolute;
@@ -156,25 +175,33 @@
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 	transition: transform 0.18s ease;
 }
+
 .rora-switch input:checked + .rora-switch-track {
 	border-color: #fff;
 	background: #fff;
 }
+
 .rora-switch input:checked + .rora-switch-track::after {
 	transform: translateX(16px);
 	background: #17171d;
 }
+
 .rora-switch input:focus-visible + .rora-switch-track {
 	outline: 2px solid #fff;
 	outline-offset: 2px;
 }
+
 [data-test="now-playing-lyrics"] {
 	position: relative;
+	overflow: hidden;
 }
+
+/* ===== NÚT SYNC LYRICS ===== */
 .rora-panel-sync-button {
-	position: fixed;
-	/* Above the lyrics surface, but below TIDAL popovers such as volume. */
-	z-index: 2147483000;
+	position: absolute !important;
+	right: 7%;
+	bottom: 24px;
+	z-index: 10 !important;
 	min-height: 40px;
 	padding: 0 18px;
 	border: 1px solid #fff;
@@ -188,50 +215,65 @@
 	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.38);
 	opacity: 1;
 	filter: none;
+	pointer-events: auto;
+	transition: all 0.2s ease;
 }
+
 .rora-panel-sync-button:hover:not(:disabled) {
 	border-color: #28c7a6;
 	background: #28c7a6;
 	color: #071a16;
-	transform: translateY(-1px);
+	transform: translateY(-2px);
+	box-shadow: 0 6px 20px rgba(40, 199, 166, 0.3);
 }
+
 .rora-panel-sync-button:disabled {
 	opacity: 0.45;
 	cursor: not-allowed;
+	transform: none !important;
 }
+
+/* QUAN TRỌNG: Nút ẩn khi có hidden attribute */
 .rora-panel-sync-button[hidden],
 .rora-lyrics-menu-button[hidden],
 .rora-lyrics-menu[hidden] {
-	display: none;
+	display: none !important;
 }
+
 .rora-romanized.rora-primary {
 	font-size: var(--rora-font, 30px);
 	font-weight: 700;
 	opacity: 1;
-	margin-top: 0;
+	margin-top: 20px;
 }
+
 .rora-timestamp {
 	font-size: 11px;
 	opacity: 0.55;
 	margin-right: 10px;
 }
+
 .rora-status {
 	padding: 48px 7%;
 	font-size: 18px;
 	opacity: 0.7;
 }
+
 .rora-quick-row {
 	border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
+
 .rora-quick-row label {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
 	width: 100%;
 }
+
 .rora-quick-row input {
 	accent-color: currentColor;
 }
+
 .rora-numeric-setting {
 	display: flex;
 	justify-content: space-between;
@@ -239,14 +281,17 @@
 	gap: 16px;
 	padding: 12px 0;
 }
+
 .rora-setting-copy {
 	display: flex;
 	flex-direction: column;
 	gap: 3px;
 }
+
 .rora-setting-copy small {
 	opacity: 0.65;
 }
+
 .rora-number-control {
 	display: flex;
 	align-items: center;
@@ -254,6 +299,7 @@
 	position: relative;
 	z-index: 1;
 }
+
 .rora-number-control button,
 .rora-number-input-wrap {
 	height: 38px;
@@ -262,15 +308,18 @@
 	color: inherit;
 	box-sizing: border-box;
 }
+
 .rora-number-control button {
 	min-width: 38px;
 	cursor: pointer;
 	font-size: 18px;
 	pointer-events: auto;
 }
+
 .rora-number-control button:hover {
 	background: rgba(255, 255, 255, 0.1);
 }
+
 .rora-number-input-wrap {
 	display: flex;
 	align-items: center;
@@ -278,6 +327,7 @@
 	border-left: 0;
 	border-right: 0;
 }
+
 .rora-number-input-wrap input {
 	width: 68px;
 	border: 0;
@@ -288,13 +338,61 @@
 	font: inherit;
 	pointer-events: auto;
 }
+
 .rora-number-input-wrap span {
 	opacity: 0.6;
 	font-size: 12px;
 }
+
 .rora-number-control .rora-reset {
 	margin-left: 8px;
 	width: auto;
 	padding: 0 10px;
 	font-size: 12px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+	.rora-panel-sync-button {
+		right: 5%;
+		bottom: 16px;
+		min-height: 36px;
+		padding: 0 14px;
+		font-size: 12px;
+	}
+	
+	.rora-lyrics-host {
+		padding: 20px 5%;
+		padding-bottom: 70px;
+	}
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+	.rora-panel-sync-button {
+		background: #2a2a35;
+		border-color: rgba(255, 255, 255, 0.3);
+		color: #fff;
+	}
+	
+	.rora-panel-sync-button:hover:not(:disabled) {
+		background: #28c7a6;
+		color: #071a16;
+	}
+}
+
+/* Animation */
+.rora-panel-sync-button:not([hidden]) {
+	animation: roraFadeIn 0.3s ease;
+}
+
+@keyframes roraFadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(10px) scale(0.95);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
 }
