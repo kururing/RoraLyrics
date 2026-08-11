@@ -74,6 +74,8 @@
 	align-items: center;
 	margin-inline-end: 8px;
 	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
 }
 
 @media (max-width: 1100px) {

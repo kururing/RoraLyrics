@@ -133,38 +133,34 @@ export function integrateRoraLyrics(
 	};
 
 	let syncButton: HTMLButtonElement | null = null;
-	let syncButtonPlace: (() => void) | null = null;
+	let syncButtonObserver: MutationObserver | null = null;
+	let syncButtonScanQueued = false;
+	let syncButtonDisposed = false;
+	let ensureSyncButtonPosition: (() => void) | null = null;
 	let hideFromOutsideClick: ((event: MouseEvent) => void) | null = null;
 	const installPanelSync = (): void => {
-		if (syncButton?.isConnected) return;
+		if (syncButton) return;
 		const button = document.createElement("button");
 		button.type = "button";
 		button.className = "rora-panel-sync-button";
 		button.textContent = "Sync Lyrics";
 		const place = (): void => {
-			const controls = [...document.querySelectorAll<HTMLElement>(
-				"button, [role='button']",
-			)]
-				.filter((element) => element !== button)
-				.map((element) => element.getBoundingClientRect())
-				.filter(
-					(rect) =>
-						rect.width > 0 &&
-						rect.height > 0 &&
-						rect.left > window.innerWidth * 0.8 &&
-						rect.bottom > window.innerHeight - 120,
-				)
-				.sort((a, b) => a.left - b.left);
-			const anchor = controls[0];
-			const width = button.offsetWidth || 112;
-			const height = button.offsetHeight || 40;
-			if (anchor && anchor.width > 0 && anchor.height > 0) {
-				button.style.left = `${Math.max(12, anchor.left - width - 12)}px`;
-				button.style.top = `${Math.max(12, Math.min(window.innerHeight - height - 12, anchor.top + (anchor.height - height) / 2))}px`;
-				return;
-			}
-			button.style.left = `${Math.max(12, window.innerWidth - width - 330)}px`;
-			button.style.top = `${Math.max(12, window.innerHeight - height - 20)}px`;
+			if (syncButtonDisposed) return;
+			// Anchor: panel lyrics — data-test ổn định của khu vực Lyrics. Nút được
+			// gắn vào panel (position: absolute ở góc dưới phải trong CSS) để luôn
+			// nằm cố định, không cuộn theo nội dung lyrics; khi TIDAL re-render,
+			// observer gắn lại chính nút này vào panel mới.
+			const panel = document.querySelector<HTMLElement>(
+				'[data-test="now-playing-lyrics"]',
+			);
+			if (!panel) return;
+
+			const existing = document.querySelector<HTMLButtonElement>(
+				".rora-panel-sync-button",
+			);
+			if (existing && existing !== button) return;
+			if (button.parentElement === panel) return;
+			panel.append(button);
 		};
 		button.addEventListener("click", () => {
 			if (canSyncLyrics()) onSyncLyrics();
@@ -172,17 +168,30 @@ export function integrateRoraLyrics(
 		syncButton = button;
 		updateSyncButton = (): void => {
 			button.disabled = !canSyncLyrics();
-			const visible = lyricsOpen && syncNeeded && canOpenLyrics();
-			button.hidden = false;
+			const visible =
+				lyricsOpen && canOpenLyrics() && canSyncLyrics() && syncNeeded;
+			button.hidden = !visible;
 			button.classList.toggle("rora-sync-visible", visible);
-			if (visible) place();
+			place();
 		};
-		document.body.appendChild(button);
-		syncButtonPlace = place;
+		ensureSyncButtonPosition = place;
+		const queuePlacement = (): void => {
+			if (syncButtonScanQueued || syncButtonDisposed) return;
+			syncButtonScanQueued = true;
+			queueMicrotask(() => {
+				syncButtonScanQueued = false;
+				place();
+			});
+		};
+		syncButtonObserver = new MutationObserver(queuePlacement);
+		syncButtonObserver.observe(document.body, {
+			childList: true,
+			subtree: true,
+		});
+		place();
 		window.addEventListener("resize", place);
 		hideFromOutsideClick = (event: MouseEvent): void => {
 			if (event.target instanceof Node && button.contains(event.target)) return;
-			syncNeeded = false;
 			updateSyncButton();
 		};
 		document.addEventListener("click", hideFromOutsideClick, true);
@@ -199,12 +208,16 @@ export function integrateRoraLyrics(
 	);
 	installPanelSync();
 	unloads.add(() => {
+		syncButtonDisposed = true;
+		syncButtonObserver?.disconnect();
 		syncButton?.remove();
-		if (syncButtonPlace) window.removeEventListener("resize", syncButtonPlace);
+		if (ensureSyncButtonPosition)
+			window.removeEventListener("resize", ensureSyncButtonPosition);
 		if (hideFromOutsideClick)
 			document.removeEventListener("click", hideFromOutsideClick, true);
 		hideFromOutsideClick = null;
-		syncButtonPlace = null;
+		ensureSyncButtonPosition = null;
+		syncButtonObserver = null;
 		syncButton = null;
 		updateSyncButton = () => undefined;
 	});

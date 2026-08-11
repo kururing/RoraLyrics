@@ -77,7 +77,21 @@ export class LyricsView {
 			this.scrollFrame = null;
 			this.automaticScrollUntil =
 				performance.now() + (behavior === "smooth" ? 1200 : 150);
-			this.buttons[index]?.scrollIntoView({ behavior, block: "center" });
+			const current = this.buttons[index];
+			if (!current) return;
+			// Tính tương đối với lyrics viewport (scroll container) đang hiển thị:
+			// đầu dòng active nằm cao hơn tâm viewport một khoảng bằng chiều cao
+			// thực tế của 2 dòng lyrics — tự thích ứng với Font Size / Line Spacing,
+			// không hardcode theo pixel và không phụ thuộc vị trí trong danh sách.
+			const container = this.element;
+			const containerRect = container.getBoundingClientRect();
+			const lineRect = current.getBoundingClientRect();
+			const lineHeight = lineRect.height || 40;
+			const offset = lineHeight * 2;
+			const lineTopInViewport = lineRect.top - containerRect.top;
+			const targetTop = containerRect.height / 2 - offset;
+			const delta = lineTopInViewport - targetTop;
+			container.scrollBy({ top: delta, behavior });
 		});
 	}
 	updateAppearance(): void {

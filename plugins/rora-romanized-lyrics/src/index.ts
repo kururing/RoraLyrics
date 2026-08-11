@@ -98,7 +98,7 @@ const render = (resetToTop = false): void => {
 	if (!view || !result || !isCurrentResult()) return;
 	view.render(result);
 	lastDisplaySignature = `${settings.showOriginal}:${settings.showRomanized}:${settings.showTimestamp}`;
-	if (resetToTop) view.scrollToTop();
+	if (resetToTop && !hasCurrentSyncedLyrics()) view.scrollToTop();
 	else syncHighlightNow();
 };
 
@@ -108,6 +108,7 @@ const load = async (): Promise<void> => {
 	result = null;
 	resultTrackId = "";
 	integration.updateAvailability();
+	integration.setSyncNeeded(true);
 	view?.status("Loading TIDAL lyrics…");
 	try {
 		const track = await metadata();
