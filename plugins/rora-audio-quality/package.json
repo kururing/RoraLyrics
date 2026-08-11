@@ -1,0 +1,13 @@
+{
+	"name": "@rora/audio-quality",
+	"releaseVersion": "1.0.0",
+	"description": "Audio quality display for TidaLuna",
+	"author": {
+		"name": "kururing",
+		"url": "https://github.com/kururing",
+		"avatarUrl": "https://avatars.githubusercontent.com/u/134995370?v=4"
+	},
+	"main": "./src/index.ts",
+	"type": "module",
+	"dependencies": {}
+}

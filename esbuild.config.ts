@@ -3,6 +3,7 @@ import { listen, pluginBuildOptions } from "luna/build";
 
 const pluginDefinitions = [
 	{ directory: "rora-romanized-lyrics", artifact: "rora.romanized-lyrics" },
+	{ directory: "rora-audio-quality", artifact: "rora.audio-quality" },
 	{ directory: "rora-tidal-mv", artifact: "rora.tidal-mv" },
 ];
 const artifactNames: string[] = [];
