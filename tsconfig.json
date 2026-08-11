@@ -1,6 +1,7 @@
 {
   "extends": "luna/tsconfig.json",
   "compilerOptions": {
-    "ignoreDeprecations": "5.0"
-  }
+    "ignoreDeprecations": "6.0"
+  },
+  "exclude": ["plugins/rora-tidal-mv/src/luna.d.ts"]
 }

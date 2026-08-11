@@ -3,7 +3,7 @@
 Independent TidaLuna plugins by kururing:
 
 - **Rora Romanized Lyrics** — synchronized original and locally romanized lyrics.
-- **Rora Audio Quality** — honest catalog labels in track tables and confirmed current-stream format in Now Playing.
+- **Rora Audio Quality** — honest audio-quality labels in track tables.
 
 ## Development
 

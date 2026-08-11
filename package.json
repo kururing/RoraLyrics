@@ -1,6 +1,6 @@
 {
 	"name": "rora-tidaluna-plugins",
-	"description": "Rora Romanized Lyrics, Audio Quality, and TIDAL MV plugins for TidaLuna",
+	"description": "Rora Romanized Lyrics and TIDAL MV plugins for TidaLuna",
 	"private": true,
 	"type": "module",
 	"packageManager": "pnpm@11.1.2",
@@ -9,7 +9,7 @@
 		"build": "rimraf ./dist && tsx esbuild.config.ts",
 		"serve": "http-server ./dist -p 3000 -s --cors -c-1",
 		"test:rora": "node --import tsx --test plugins/*/test/*.test.ts",
-		"typecheck": "tsc -p plugins/rora-audio-quality/tsconfig.json && tsc -p plugins/rora-romanized-lyrics/tsconfig.json && tsc -p plugins/rora-tidal-mv/tsconfig.json",
+		"typecheck": "tsc -p plugins/rora-romanized-lyrics/tsconfig.json && tsc -p plugins/rora-tidal-mv/tsconfig.json",
 		"format": "biome format --write plugins esbuild.config.ts package.json",
 		"lint": "biome lint plugins esbuild.config.ts"
 	},

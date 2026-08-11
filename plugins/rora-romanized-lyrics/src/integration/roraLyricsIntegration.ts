@@ -30,9 +30,19 @@ export function integrateRoraLyrics(
 		const parent = lyricsButton.parentElement;
 		if (!parent || parent.querySelector(":scope > .rora-lyrics-menu-button"))
 			return;
+		// Read the native tab size before adding our sibling. A taller menu button
+		// would otherwise stretch the controls row and make the active Lyrics pill
+		// taller than the Credits pill.
+		const lyricsRect = lyricsButton.getBoundingClientRect();
+		const lyricsBorderRadius = getComputedStyle(lyricsButton).borderRadius;
 		const menuButton = document.createElement("button");
 		menuButton.type = "button";
 		menuButton.className = "rora-lyrics-menu-button";
+		if (lyricsRect.height > 0) {
+			menuButton.style.width = `${lyricsRect.height}px`;
+			menuButton.style.height = `${lyricsRect.height}px`;
+		}
+		menuButton.style.borderRadius = lyricsBorderRadius;
 		menuButton.textContent = "\u22ef";
 		menuButton.title = "Lyrics display options";
 		menuButton.setAttribute("aria-label", "Lyrics display options");
