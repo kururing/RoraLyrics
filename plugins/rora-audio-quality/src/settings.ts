@@ -2,6 +2,9 @@ import { ReactiveStore } from "@luna/core";
 
 export interface AudioQualitySettings {
 	enableTrackList: boolean;
+	qualityDisplay: boolean;
+	qualityDisplayMode: "name" | "detailed";
+	enableSearchQualityFilter: boolean;
 }
 
 export const settings =
@@ -9,8 +12,15 @@ export const settings =
 		"RoraAudioQuality",
 		{
 			enableTrackList: true,
+			qualityDisplay: false,
+			qualityDisplayMode: "detailed",
+			enableSearchQualityFilter: false,
 		},
 	);
+
+settings.qualityDisplay ??= false;
+settings.qualityDisplayMode ??= "detailed";
+settings.enableSearchQualityFilter ??= false;
 
 const listeners = new Set<() => void>();
 export const setSetting = <K extends keyof AudioQualitySettings>(

@@ -1,4 +1,4 @@
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { listen, pluginBuildOptions } from "luna/build";
 
 const pluginDefinitions = [
@@ -26,5 +26,4 @@ const workspacePackage = JSON.parse(
 ) as Record<string, unknown>;
 workspacePackage.plugins = artifactNames;
 await mkdir("./dist", { recursive: true });
-await copyFile("./plugins/rora-tidal-mv/src/player-v2.html", "./dist/rora.tidal-mv-player-v2.html");
 await writeFile("./dist/store.json", JSON.stringify(workspacePackage));

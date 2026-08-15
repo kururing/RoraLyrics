@@ -50,6 +50,7 @@ export const getTrackRowFromDuration = (
 export interface TrackListIntegrationOptions {
 	loadQuality: (trackId: string) => Promise<TrackAudioQuality>;
 	isEnabled: () => boolean;
+	getDisplayMode: () => "name" | "detailed";
 	isDisposed: () => boolean;
 }
 
@@ -169,7 +170,53 @@ export class TrackListIntegration {
 		const trackId = getTrackId(row);
 		if (!trackId) return;
 		this.knownRows.add(row);
-		// Badge rendering removed — quality cells are no longer injected into the DOM.
+		const duration = findDuration(row);
+		if (!duration?.parentElement) return;
+		const table = row.closest<HTMLElement>(
+			'table, [role="table"], [role="grid"], div[aria-label="Tracklist"]',
+		);
+		if (table) this.ensureHeader(table);
+		let cell = row.querySelector<HTMLElement>(
+			`[data-rora-quality="${CELL_MARKER}"]`,
+		);
+		if (
+			!shouldProcessTrackRow(
+				row.dataset[ROW_TRACK_MARKER],
+				trackId,
+				Boolean(cell),
+			)
+		)
+			return;
+
+		row.dataset[ROW_TRACK_MARKER] = trackId;
+		if (!cell) {
+			cell = duration.cloneNode(false) as HTMLElement;
+			cell.dataset.roraQuality = CELL_MARKER;
+			cell.classList.add("rora-quality-column");
+			cell.setAttribute("role", "cell");
+			duration.parentElement.insertBefore(cell, duration);
+		}
+		cell.replaceChildren(createQualityBadge(null));
+		try {
+			const quality = await this.options.loadQuality(trackId);
+			if (
+				this.options.isDisposed() ||
+				!row.isConnected ||
+				getTrackId(row) !== trackId ||
+				row.dataset[ROW_TRACK_MARKER] !== trackId
+			)
+				return;
+			cell.replaceChildren(
+				createQualityBadge(quality, "details", this.options.getDisplayMode()),
+			);
+		} catch {
+			if (
+				!this.options.isDisposed() &&
+				getTrackId(row) === trackId &&
+				row.dataset[ROW_TRACK_MARKER] === trackId
+			)
+				cell.replaceChildren(createQualityBadge(null));
+		}
 	}
 
 	private collectRows(node: Node): void {
@@ -205,8 +252,23 @@ export class TrackListIntegration {
 		});
 	}
 
-	private ensureHeader(_trackList: HTMLElement): void {
-		// No-op: quality column header is not rendered.
+	private ensureHeader(trackList: HTMLElement): void {
+		if (
+			!this.options.isEnabled() ||
+			trackList.querySelector(`[data-rora-quality="${HEADER_MARKER}"]`)
+		)
+			return;
+		const time = trackList.querySelector<HTMLElement>(
+			'thead th[class*="_timeColumn"], [class*="_timeColumn"][role="columnheader"], [data-test="track-duration-header"]',
+		);
+		if (!time?.parentElement) return;
+		const header = time.cloneNode(false) as HTMLElement;
+		header.dataset.roraQuality = HEADER_MARKER;
+		header.classList.add("rora-quality-column");
+		header.setAttribute("role", "columnheader");
+		header.setAttribute("aria-label", "Audio quality");
+		header.textContent = "QUALITY";
+		time.parentElement.insertBefore(header, time);
 	}
 
 	private removeInjected(trackList: HTMLElement): void {

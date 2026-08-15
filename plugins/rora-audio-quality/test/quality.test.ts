@@ -3,6 +3,8 @@ import test from "node:test";
 import { QualityCache, RequestPool } from "../src/cache";
 import {
 	formatAudioQuality,
+	formatQualityDisplay,
+	getQualityCategory,
 	formatQualityLabel,
 	formatSampleRate,
 	fromCatalogMetadata,
@@ -114,6 +116,29 @@ test("playback info exposes exact quality before playback starts", () => {
 	assert.equal(formatAudioQuality(resolved), "24-bit / 96 kHz");
 });
 
+test("maps exact playback specs to display names", () => {
+	const cases = [
+		[16, 32000, "radio", "Radio Quality"],
+		[16, 44100, "cd", "CD Quality"],
+		[16, 48000, "dvd", "DVD Quality"],
+		[24, 44100, "studio", "Studio Quality"],
+		[24, 48000, "studio", "Studio Quality"],
+		[24, 88200, "hi-res", "Hi-Res"],
+		[24, 96000, "hi-res", "Hi-Res"],
+		[24, 176400, "ultra-hi-res", "Ultra-Hi-Res"],
+		[24, 192000, "ultra-hi-res", "Ultra-Hi-Res"],
+	] as const;
+	for (const [bitDepth, sampleRateHz, category, name] of cases) {
+		const item = quality({ bitDepth, sampleRateHz });
+		assert.equal(getQualityCategory(item), category);
+		assert.equal(formatQualityDisplay(item, "name"), name);
+	}
+	assert.equal(
+		formatQualityDisplay(quality({ bitDepth: 24, sampleRateHz: 96000 }), "detailed"),
+		"24-bit / 96 kHz",
+	);
+});
+
 test("virtualized rows process every lazy batch and recycle by track ID", () => {
 	const trackIds = Array.from({ length: 200 }, (_, index) => String(index + 1));
 	const processed = trackIds.filter((trackId) =>
@@ -128,7 +153,7 @@ test("virtualized rows process every lazy batch and recycle by track ID", () => 
 	assert.equal(shouldProcessTrackRow("a", "a", false), true);
 });
 
-test("settings expose only the track-list control", async () => {
+test("settings expose exclusive quality modes and search filter control", async () => {
 	const { readFile } = await import("node:fs/promises");
 	const settingsSource = await readFile(
 		new URL("../src/settings.ts", import.meta.url),
@@ -138,13 +163,11 @@ test("settings expose only the track-list control", async () => {
 		new URL("../src/SettingsPage.tsx", import.meta.url),
 		"utf8",
 	);
-	assert.deepEqual(
-		[...settingsSource.matchAll(/^\s*(enableTrackList): boolean;/gm)].map(
-			(match) => match[1],
-		),
-		["enableTrackList"],
-	);
-	assert.equal((pageSource.match(/<Switch\s/g) ?? []).length, 1);
+	assert.match(settingsSource, /qualityDisplayMode: "name" \| "detailed"/);
+	assert.match(settingsSource, /enableSearchQualityFilter: boolean/);
+	assert.equal((pageSource.match(/<Switch\s/g) ?? []).length, 5);
+	assert.match(pageSource, /if \(value\) setSetting\("qualityDisplayMode", "name"\)/);
+	assert.match(pageSource, /if \(value\) setSetting\("qualityDisplayMode", "detailed"\)/);
 	assert.doesNotMatch(`${settingsSource}\n${pageSource}`, /enableNowPlaying/);
 	assert.doesNotMatch(
 		`${settingsSource}\n${pageSource}`,
@@ -168,7 +191,7 @@ test("plugin removes legacy now-playing badges and clone wrappers without inject
 	assert.doesNotMatch(source, /createQualityBadge\(quality\)/);
 });
 
-test("track-list integration keeps observers but skips badge injection", async () => {
+test("track-list integration injects once and preserves the QUALITY position", async () => {
 	const source = await import("node:fs/promises").then(({ readFile }) =>
 		readFile(
 			new URL("../src/trackListIntegration.ts", import.meta.url),
@@ -180,27 +203,27 @@ test("track-list integration keeps observers but skips badge injection", async (
 	assert.match(source, /roraQualityTrackId/);
 	assert.match(source, /media-list-item/);
 	assert.match(source, /refreshTrack/);
-	// Badge injection is removed: no cell insertion or header text
-	assert.doesNotMatch(source, /duration\.parentElement\.insertBefore/);
-	assert.doesNotMatch(source, /createQualityBadge\(quality/);
-	assert.doesNotMatch(source, /textContent = "QUALITY"/);
-	assert.doesNotMatch(source, /time\.parentElement\.insertBefore/);
+	assert.match(source, /shouldProcessTrackRow/);
+	assert.match(source, /duration\.parentElement\.insertBefore/);
+	assert.match(source, /createQualityBadge\(quality/);
+	assert.match(source, /textContent = "QUALITY"/);
+	assert.match(source, /time\.parentElement\.insertBefore/);
 });
 
-test("badge CSS hides quality column and badge", async () => {
+test("badge CSS renders the existing quality column", async () => {
 	const css = await import("node:fs/promises").then(({ readFile }) =>
 		readFile(new URL("../src/styles.css", import.meta.url), "utf8"),
 	);
-	assert.match(css, /\.rora-quality-column\s*\{[^}]*display:\s*none/);
-	assert.match(css, /\.rora-quality-badge\s*\{[^}]*display:\s*none/);
+	assert.match(css, /\.rora-quality-column\s*\{[^}]*flex:/);
+	assert.match(css, /\.rora-quality-badge\s*\{[^}]*display:\s*inline-flex/);
 });
 
-test("badge component returns hidden span without rendering content", async () => {
+test("badge component renders the selected display mode", async () => {
 	const source = await import("node:fs/promises").then(({ readFile }) =>
 		readFile(new URL("../src/badge.ts", import.meta.url), "utf8"),
 	);
-	assert.match(source, /display = "none"/);
-	assert.doesNotMatch(source, /textContent\s*=\s*["']HI_RES/);
+	assert.match(source, /formatQualityDisplay/);
+	assert.match(source, /badge\.textContent/);
 });
 
 test("catalog source remains unconfirmed until playback", () => {

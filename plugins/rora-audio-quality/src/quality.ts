@@ -40,6 +40,55 @@ export const formatAudioQuality = (
 		: formatQualityLabel(quality.qualityLabel);
 };
 
+export type QualityDisplayMode = "name" | "detailed";
+export type QualityCategory =
+	| "radio"
+	| "cd"
+	| "dvd"
+	| "studio"
+	| "hi-res"
+	| "ultra-hi-res";
+
+export const getQualityCategory = (
+	quality: TrackAudioQuality | null,
+): QualityCategory | null => {
+	if (
+		!quality ||
+		!positiveFinite(quality.bitDepth) ||
+		!positiveFinite(quality.sampleRateHz)
+	)
+		return null;
+	const { bitDepth, sampleRateHz } = quality;
+	if (bitDepth === 16 && sampleRateHz === 32000) return "radio";
+	if (bitDepth === 16 && sampleRateHz === 44100) return "cd";
+	if (bitDepth === 16 && sampleRateHz === 48000) return "dvd";
+	if (bitDepth === 24 && (sampleRateHz === 44100 || sampleRateHz === 48000))
+		return "studio";
+	if (bitDepth === 24 && (sampleRateHz === 88200 || sampleRateHz === 96000))
+		return "hi-res";
+	if (bitDepth === 24 && sampleRateHz >= 176400) return "ultra-hi-res";
+	return null;
+};
+
+export const formatQualityName = (
+	quality: TrackAudioQuality | null,
+): string => {
+	switch (getQualityCategory(quality)) {
+		case "radio": return "Radio Quality";
+		case "cd": return "CD Quality";
+		case "dvd": return "DVD Quality";
+		case "studio": return "Studio Quality";
+		case "hi-res": return "Hi-Res";
+		case "ultra-hi-res": return "Ultra-Hi-Res";
+		default: return formatAudioQuality(quality);
+	}
+};
+
+export const formatQualityDisplay = (
+	quality: TrackAudioQuality | null,
+	mode: QualityDisplayMode,
+): string => mode === "name" ? formatQualityName(quality) : formatAudioQuality(quality);
+
 const labelMap: Record<string, TrackAudioQuality["qualityLabel"]> = {
 	HI_RES_LOSSLESS: "HI_RES",
 	HI_RES: "HI_RES",

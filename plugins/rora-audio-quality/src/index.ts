@@ -4,6 +4,7 @@ import { MediaItem, observe, StyleTag } from "@luna/lib";
 import { QualityCache, RequestPool } from "./cache";
 import { fromPlaybackInfo } from "./quality";
 import { Settings } from "./SettingsPage";
+import { SearchQualityFilter } from "./searchQualityFilter";
 import { settings, subscribeSettings } from "./settings";
 import {
 	DURATION_SELECTOR,
@@ -19,6 +20,20 @@ import type { TrackAudioQuality } from "./types";
 export { Settings };
 export const unloads = new Set<LunaUnload>();
 new StyleTag("RoraAudioQuality", unloads, styles);
+
+const removeLegacySearchQualityFilter = (): void => {
+	document
+		.querySelectorAll<HTMLElement>(".rora-quality-filter-label")
+		.forEach((element) => {
+			element.remove();
+		});
+	document
+		.querySelectorAll<HTMLElement>("[data-rora-quality-filter]")
+		.forEach((element) => {
+			element.removeAttribute("data-rora-quality-filter");
+		});
+};
+removeLegacySearchQualityFilter();
 
 const LEGACY_NOW_PLAYING_SELECTOR = [
 	'[data-rora-quality="rora-audio-quality-now-playing"]',
@@ -68,8 +83,13 @@ const enqueueQualityLookup = async (
 const trackLists = new TrackListIntegration({
 	loadQuality: enqueueQualityLookup,
 	isEnabled: () => settings.enableTrackList,
+	getDisplayMode: () =>
+		settings.qualityDisplay ? settings.qualityDisplayMode : "detailed",
 	isDisposed: () => disposed,
 });
+
+const searchQualityFilter = new SearchQualityFilter(enqueueQualityLookup);
+if (settings.enableSearchQualityFilter) searchQualityFilter.start();
 
 const mountTrackList = (trackList: HTMLElement): void => {
 	trackLists.mount(trackList);
@@ -148,11 +168,14 @@ unloads.add(() => {
 
 const unsubscribe = subscribeSettings(() => {
 	trackLists.refresh();
+	if (settings.enableSearchQualityFilter) searchQualityFilter.start();
+	else searchQualityFilter.stop();
 });
 unloads.add(unsubscribe);
 
 unloads.add(() => {
 	disposed = true;
+	searchQualityFilter.stop();
 	trackLists.disconnect();
 	requests.dispose();
 	cache.clear();

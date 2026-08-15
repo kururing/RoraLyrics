@@ -29,9 +29,61 @@
 }
 
 .rora-quality-column {
-	display: none !important;
+	box-sizing: border-box;
+	flex: 0 1 156px;
+	min-width: 96px;
+	max-width: 156px;
+	justify-content: flex-start;
+	text-align: left;
 }
 
 .rora-quality-badge {
-	display: none !important;
+	display: inline-flex;
+	align-items: center;
+	max-width: 100%;
+	padding: 2px 7px;
+	border: 1px solid currentColor;
+	border-radius: 999px;
+	font: inherit;
+	font-size: 0.75rem;
+	line-height: 1.25;
+	opacity: 0.78;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.rora-quality-badge--yellow {
+	color: #f5c842;
+	border-color: #f5c842;
+	background: rgba(245, 200, 66, 0.08);
+}
+
+@media (max-width: 760px) {
+	.rora-quality-column { display: none; }
+}
+
+.rora-search-quality-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.rora-search-quality-control {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin-inline-start: auto;
+	font-size: 0.875rem;
+	white-space: nowrap;
+}
+
+.rora-search-quality-control select {
+	min-width: 118px;
+	padding: 5px 28px 5px 8px;
+	border: 1px solid rgba(255, 255, 255, 0.28);
+	border-radius: 5px;
+	background: rgba(20, 20, 24, 0.92);
+	color: inherit;
 }
