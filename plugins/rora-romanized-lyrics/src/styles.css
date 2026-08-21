@@ -216,14 +216,14 @@
 	font-weight: 700;
 	cursor: pointer;
 	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.38);
-	opacity: 1;
 	filter: none;
-	pointer-events: auto;
 	transform: none;
 	opacity: 0;
 	visibility: hidden;
 	pointer-events: none;
-	transition: opacity 0.2s ease, visibility 0s linear 0.2s;
+	transition:
+		opacity 0.2s ease,
+		visibility 0s linear 0.2s;
 }
 
 .rora-panel-sync-button.rora-sync-visible {
@@ -381,7 +381,7 @@
 		padding: 0 14px;
 		font-size: 12px;
 	}
-	
+
 	.rora-lyrics-host {
 		padding: 20px 5%;
 	}
@@ -394,7 +394,7 @@
 		border-color: rgba(255, 255, 255, 0.3);
 		color: #fff;
 	}
-	
+
 	.rora-panel-sync-button:hover:not(:disabled) {
 		background: #28c7a6;
 		color: #071a16;

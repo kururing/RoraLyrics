@@ -2,7 +2,11 @@
     "linter": {
       "rules": {
         "complexity": {
-          "useArrowFunction": "off"
+          "useArrowFunction": "off",
+          "noImportantStyles": "off"
+        },
+        "suspicious": {
+          "noConfusingVoidType": "off"
         }
       }
     }

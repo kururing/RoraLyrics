@@ -134,7 +134,10 @@ test("maps exact playback specs to display names", () => {
 		assert.equal(formatQualityDisplay(item, "name"), name);
 	}
 	assert.equal(
-		formatQualityDisplay(quality({ bitDepth: 24, sampleRateHz: 96000 }), "detailed"),
+		formatQualityDisplay(
+			quality({ bitDepth: 24, sampleRateHz: 96000 }),
+			"detailed",
+		),
 		"24-bit / 96 kHz",
 	);
 });
@@ -166,8 +169,14 @@ test("settings expose exclusive quality modes and search filter control", async 
 	assert.match(settingsSource, /qualityDisplayMode: "name" \| "detailed"/);
 	assert.match(settingsSource, /enableSearchQualityFilter: boolean/);
 	assert.equal((pageSource.match(/<Switch\s/g) ?? []).length, 5);
-	assert.match(pageSource, /if \(value\) setSetting\("qualityDisplayMode", "name"\)/);
-	assert.match(pageSource, /if \(value\) setSetting\("qualityDisplayMode", "detailed"\)/);
+	assert.match(
+		pageSource,
+		/if \(value\) setSetting\("qualityDisplayMode", "name"\)/,
+	);
+	assert.match(
+		pageSource,
+		/if \(value\) setSetting\("qualityDisplayMode", "detailed"\)/,
+	);
 	assert.doesNotMatch(`${settingsSource}\n${pageSource}`, /enableNowPlaying/);
 	assert.doesNotMatch(
 		`${settingsSource}\n${pageSource}`,
@@ -240,6 +249,59 @@ test("cache keys quality strictly by track ID", () => {
 	assert.equal(cache.get("a", 11)?.qualityLabel, "HIGH");
 	assert.equal(cache.get("b", 11), null);
 	assert.equal(cache.get("a", 1011), null);
+});
+
+test("cache persists to storage and restores on cold start", () => {
+	const storageMap = new Map<string, string>();
+	const mockStorage = {
+		getItem: (key: string) => storageMap.get(key) ?? null,
+		setItem: (key: string, val: string) => storageMap.set(key, val),
+		removeItem: (key: string) => storageMap.delete(key),
+	};
+
+	const session1 = new QualityCache(10, 10000, mockStorage);
+	session1.set(
+		quality({
+			trackId: "track1",
+			bitDepth: 24,
+			sampleRateHz: 96000,
+			qualityLabel: "HI_RES",
+			isConfirmed: true,
+		}),
+		1000,
+	);
+
+	// Cold start in session 2 using same storage backend
+	const session2 = new QualityCache(10, 10000, mockStorage);
+	const restored = session2.get("track1", 2000);
+	assert.equal(restored?.qualityLabel, "HI_RES");
+	assert.equal(restored?.bitDepth, 24);
+	assert.equal(restored?.sampleRateHz, 96000);
+	assert.equal(restored?.isConfirmed, true);
+});
+
+test("negative caching prevents repetitive probe loops for unknown/missing tracks", () => {
+	const cache = new QualityCache(10, 10000);
+	cache.setNegative("missing-1", 1000, 5000);
+	const hit = cache.get("missing-1", 2000);
+	assert.ok(hit !== null);
+	assert.equal(hit.qualityLabel, "UNKNOWN");
+	assert.equal(hit.isConfirmed, false);
+	assert.equal(cache.get("missing-1", 7000), null);
+});
+
+test("corrupt persistent entries are automatically invalidated", () => {
+	const storageMap = new Map<string, string>();
+	storageMap.set("rora_aq_v1_corrupt", "{invalid json");
+	const mockStorage = {
+		getItem: (key: string) => storageMap.get(key) ?? null,
+		setItem: (key: string, val: string) => storageMap.set(key, val),
+		removeItem: (key: string) => storageMap.delete(key),
+	};
+
+	const cache = new QualityCache(10, 10000, mockStorage);
+	assert.equal(cache.get("corrupt"), null);
+	assert.equal(storageMap.has("rora_aq_v1_corrupt"), false);
 });
 
 test("request pool deduplicates keys and enforces concurrency", async () => {

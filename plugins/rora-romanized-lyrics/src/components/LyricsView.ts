@@ -94,20 +94,31 @@ export class LyricsView {
 			container.scrollBy({ top: delta, behavior });
 		});
 	}
+	private lastFontSize = -1;
+	private lastLineSpacing = -1;
+	private lastOpacity = -1;
+
 	updateAppearance(): void {
-		this.element.style.setProperty("--rora-font", `${settings.fontSize}px`);
-		this.element.style.setProperty(
-			"--rora-spacing",
-			String(settings.lineSpacing),
-		);
-		this.element.style.setProperty(
-			"--rora-opacity",
-			String(settings.romanizedOpacity),
-		);
+		const fontSize = settings.fontSize;
+		const lineSpacing = settings.lineSpacing;
+		const opacity = settings.romanizedOpacity;
+
+		if (fontSize !== this.lastFontSize) {
+			this.element.style.setProperty("--rora-font", `${fontSize}px`);
+			this.lastFontSize = fontSize;
+		}
+		if (lineSpacing !== this.lastLineSpacing) {
+			this.element.style.setProperty("--rora-spacing", String(lineSpacing));
+			this.lastLineSpacing = lineSpacing;
+		}
+		if (opacity !== this.lastOpacity) {
+			this.element.style.setProperty("--rora-opacity", String(opacity));
+			this.lastOpacity = opacity;
+		}
 	}
+
 	render(result: LyricsResult): void {
 		this.element.className = "rora-lyrics-host";
-		this.element.replaceChildren();
 		this.buttons = [];
 		this.introButton = null;
 		this.active = -1;
@@ -120,6 +131,9 @@ export class LyricsView {
 			this.status("Instrumental track");
 			return;
 		}
+
+		const fragment = document.createDocumentFragment();
+
 		if (result.lines[0]?.startTimeMs > 500) {
 			const intro = document.createElement("button");
 			intro.type = "button";
@@ -131,9 +145,10 @@ export class LyricsView {
 			intro.appendChild(note);
 			intro.addEventListener("click", () => PlayState.seek(0));
 			this.introButton = intro;
-			this.element.appendChild(intro);
+			fragment.appendChild(intro);
 		}
-		for (const line of result.lines) {
+		for (let i = 0; i < result.lines.length; i++) {
+			const line = result.lines[i];
 			const button = document.createElement("button");
 			button.type = "button";
 			button.className = "rora-line";
@@ -191,11 +206,16 @@ export class LyricsView {
 			button.addEventListener("click", () =>
 				PlayState.seek(millisecondsToSeconds(line.startTimeMs)),
 			);
-			this.element.appendChild(button);
+			fragment.appendChild(button);
 			this.buttons.push(button);
 		}
-		if (!this.buttons.some(Boolean)) this.status("Lyrics unavailable");
+		if (!this.buttons.some(Boolean)) {
+			this.status("Lyrics unavailable");
+			return;
+		}
+		this.element.replaceChildren(fragment);
 	}
+
 	tick(result: LyricsResult, playbackPositionMs: number): void {
 		if (!result.syncedLyrics) return;
 		const index = findActiveLine(
@@ -205,27 +225,33 @@ export class LyricsView {
 		);
 		const introActive =
 			this.introButton !== null &&
+			result.lines[0] !== undefined &&
 			playbackPositionMs < result.lines[0].startTimeMs;
-		if (
-			index === this.active &&
-			this.introButton?.classList.contains("rora-active") === introActive
-		)
-			return;
-		if (index === this.active) return;
-		this.buttons[this.active]?.classList.remove("rora-active");
-		this.active = index;
-		const current = this.buttons[index];
-		this.introButton?.classList.toggle("rora-active", introActive);
-		current?.classList.add("rora-active");
+
+		const currentIntroActive =
+			this.introButton?.classList.contains("rora-active") ?? false;
+		if (index === this.active && currentIntroActive === introActive) return;
+
+		if (this.introButton && currentIntroActive !== introActive) {
+			this.introButton.classList.toggle("rora-active", introActive);
+		}
+
+		if (index !== this.active) {
+			this.buttons[this.active]?.classList.remove("rora-active");
+			this.active = index;
+			this.buttons[index]?.classList.add("rora-active");
+		}
+
 		if (this.holdAtTop) return;
 		if (introActive) {
 			this.introButton?.scrollIntoView({ behavior: "smooth", block: "center" });
 			return;
 		}
-		if (current && performance.now() - this.lastManualScroll > 3500)
+		const current = this.buttons[index];
+		if (current && performance.now() - this.lastManualScroll > 3500) {
 			this.onSynchronized?.();
-		if (current && performance.now() - this.lastManualScroll > 3500)
 			this.scrollTo(index, "smooth");
+		}
 	}
 	synchronize(
 		result: LyricsResult,

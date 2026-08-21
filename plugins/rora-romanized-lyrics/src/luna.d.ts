@@ -2,10 +2,7 @@ declare module "file://styles.css?minify" {
 	const styles: string;
 	export default styles;
 }
-declare module "file://../styles.css?minify" {
-	const styles: string;
-	export default styles;
-}
+
 declare module "@luna/core" {
 	export type LunaUnload = () => void;
 	export const ReactiveStore: {
@@ -18,12 +15,12 @@ declare module "@luna/core" {
 		};
 	};
 }
+
 declare module "@luna/lib" {
 	export type LunaUnload = () => void;
-	export type ContentType = "track" | "video";
 	export interface LunaMediaItem {
 		id: string | number;
-		contentType?: ContentType;
+		contentType?: "track" | "video";
 		tidalItem?: Record<string, unknown> & {
 			id?: string | number;
 			title?: string;
@@ -31,6 +28,8 @@ declare module "@luna/lib" {
 			artists?: Array<{ name?: string; id?: string | number }>;
 			album?: { title?: string; id?: string | number };
 			type?: string;
+			duration?: number;
+			version?: string;
 			quality?: string;
 			imageId?: string;
 		};
@@ -45,52 +44,31 @@ declare module "@luna/lib" {
 		readonly playbackContext:
 			| {
 					actualProductId?: string | number;
-					actualVideoQuality?: string | null;
+					actualDuration?: number;
 			  }
 			| undefined;
+		readonly playbackControls: {
+			readonly latestCurrentTime: number;
+			readonly latestCurrentTimeSyncTimestamp: number;
+			readonly playbackContext?: {
+				readonly actualDuration?: number;
+			};
+		};
 	};
 	export const MediaItem: {
-		fromId(
-			itemId: string | number,
-			contentType?: ContentType,
-		): Promise<LunaMediaItem | undefined>;
 		fromPlaybackContext(ctx?: {
 			actualProductId?: string | number;
 		}): Promise<LunaMediaItem | undefined>;
-		fromIsrc(isrc: string): Promise<LunaMediaItem | undefined>;
-		onMediaTransition(
-			unloads: Set<() => void>,
-			callback: (item: LunaMediaItem) => void,
-		): void;
-		onPreload(
-			unloads: Set<() => void>,
-			callback: (item: LunaMediaItem) => void,
-		): void;
-	};
-	export const TidalApi: {
-		fetch<T>(url: string): Promise<T | undefined>;
-		track(trackId: string | number): Promise<unknown>;
 	};
 	export const redux: {
 		store: {
 			getState(): Record<string, unknown>;
 		};
-		actions: Record<string, (...args: unknown[]) => unknown>;
-		intercept(
+		intercept<T = unknown>(
 			actionType: string | string[],
 			unloads: Set<() => void>,
-			callback: (payload: unknown, action: unknown) => boolean | undefined,
+			callback: (payload: T, action?: unknown) => boolean | void,
 		): () => void;
-		interceptActionResp<T>(
-			trigger: () => unknown,
-			unloads: Set<() => void>,
-			success: string[],
-			failure: string[],
-		): Promise<T>;
-		interceptPromise<T>(
-			actionType: string,
-			unloads: Set<() => void>,
-		): Promise<T>;
 	};
 	export class StyleTag {
 		constructor(name: string, unloads: Set<() => void>, styles: string);
@@ -100,16 +78,15 @@ declare module "@luna/lib" {
 		selector: string,
 		callback: (element: T) => void,
 	) => void;
+	export const safeInterval: (
+		unloads: Set<() => void>,
+		callback: () => void,
+		ms: number,
+	) => number;
 }
+
 declare module "@luna/ui" {
 	import type React from "react";
 	export const LunaSettings: React.ComponentType<React.PropsWithChildren>;
-	export const LunaTextSetting: React.ComponentType<Record<string, unknown>>;
 	export const LunaSwitchSetting: React.ComponentType<Record<string, unknown>>;
-	export const LunaSelectSetting: React.ComponentType<
-		React.PropsWithChildren<Record<string, unknown>>
-	>;
-	export const LunaSelectItem: React.ComponentType<
-		React.PropsWithChildren<Record<string, unknown>>
-	>;
 }

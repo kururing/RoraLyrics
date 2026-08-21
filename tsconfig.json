@@ -1,7 +1,13 @@
 {
-  "extends": "luna/tsconfig.json",
   "compilerOptions": {
-    "ignoreDeprecations": "6.0"
-  },
-  "exclude": ["plugins/rora-tidal-mv/src/luna.d.ts"]
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "types": ["node", "react", "react-dom"]
+  }
 }

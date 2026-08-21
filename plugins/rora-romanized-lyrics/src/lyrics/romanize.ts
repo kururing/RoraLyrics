@@ -45,7 +45,25 @@ const romanizers: Romanizer[] = [
 	},
 ];
 export const ROMANIZATION_CACHE_VERSION = 3;
+const MAX_CACHE_ENTRIES = 2000;
 const cache = new Map<string, string | undefined>();
+
+const getCached = (key: string): { found: boolean; value?: string } => {
+	if (!cache.has(key)) return { found: false };
+	const val = cache.get(key);
+	cache.delete(key);
+	cache.set(key, val);
+	return { found: true, value: val };
+};
+
+const setCached = (key: string, value: string | undefined): void => {
+	cache.delete(key);
+	cache.set(key, value);
+	if (cache.size > MAX_CACHE_ENTRIES) {
+		const oldest = cache.keys().next().value;
+		if (oldest !== undefined) cache.delete(oldest);
+	}
+};
 
 export const containsChineseCharacters = (text: string): boolean =>
 	/\p{Script=Han}/u.test(text);
@@ -95,21 +113,25 @@ const romanizeMixedText = (text: string): string => {
 	return text.replace(/[\uac00-\ud7af]+|\p{Script=Han}+/gu, romanizeSegment);
 };
 
+const SCRIPT_PATTERNS: ReadonlyArray<readonly [string, RegExp]> = [
+	["Hangul", /[\uac00-\ud7af]/u],
+	["Kana", /[\u3040-\u30ff\u31f0-\u31ff]/u],
+	["Han", /\p{Script=Han}/u],
+	["Cyrillic", /\p{Script=Cyrillic}/u],
+	["Greek", /\p{Script=Greek}/u],
+	["Arabic", /\p{Script=Arabic}/u],
+	["Hebrew", /\p{Script=Hebrew}/u],
+	["Devanagari", /\p{Script=Devanagari}/u],
+	["Thai", /\p{Script=Thai}/u],
+];
+
 const remainingNonLatinScripts = (text: string): string[] => {
-	const scripts: Array<[string, RegExp]> = [
-		["Hangul", /[\uac00-\ud7af]/u],
-		["Kana", /[\u3040-\u30ff\u31f0-\u31ff]/u],
-		["Han", /\p{Script=Han}/u],
-		["Cyrillic", /\p{Script=Cyrillic}/u],
-		["Greek", /\p{Script=Greek}/u],
-		["Arabic", /\p{Script=Arabic}/u],
-		["Hebrew", /\p{Script=Hebrew}/u],
-		["Devanagari", /\p{Script=Devanagari}/u],
-		["Thai", /\p{Script=Thai}/u],
-	];
-	return scripts
-		.filter(([, pattern]) => pattern.test(text))
-		.map(([name]) => name);
+	const result: string[] = [];
+	for (let i = 0; i < SCRIPT_PATTERNS.length; i++) {
+		const [name, pattern] = SCRIPT_PATTERNS[i];
+		if (pattern.test(text)) result.push(name);
+	}
+	return result;
 };
 
 function createResult(source: string, candidate: string): RomanizationResult {
@@ -125,7 +147,8 @@ function createResult(source: string, candidate: string): RomanizationResult {
 }
 
 export function romanizeTextResult(text: string): RomanizationResult {
-	if (!remainingNonLatinScripts(text).length)
+	const initialScripts = remainingNonLatinScripts(text);
+	if (initialScripts.length === 0)
 		return {
 			text,
 			status: "already-latin",
@@ -135,26 +158,25 @@ export function romanizeTextResult(text: string): RomanizationResult {
 	try {
 		const candidate = romanizeMixedText(text).trim();
 		const remaining = remainingNonLatinScripts(candidate);
-		if (!candidate || remaining.length)
+		if (!candidate || remaining.length > 0)
 			return {
 				text: candidate,
 				status: "unsupported",
 				remainingNonLatinScripts: remaining,
-				originalScript: remainingNonLatinScripts(text),
+				originalScript: initialScripts,
 			};
 		return {
 			text: candidate,
 			status: "romanized",
 			remainingNonLatinScripts: [],
-			originalScript: remainingNonLatinScripts(text),
+			originalScript: initialScripts,
 		};
 	} catch {
-		const scripts = remainingNonLatinScripts(text);
 		return {
 			text,
 			status: "failed",
-			remainingNonLatinScripts: scripts,
-			originalScript: scripts,
+			remainingNonLatinScripts: initialScripts,
+			originalScript: initialScripts,
 		};
 	}
 }
@@ -179,7 +201,8 @@ export class RomanizationEngine {
 
 export function romanizeText(text: string): string | undefined {
 	const cacheKey = `v${ROMANIZATION_CACHE_VERSION}:${text}`;
-	if (cache.has(cacheKey)) return cache.get(cacheKey);
+	const cached = getCached(cacheKey);
+	if (cached.found) return cached.value;
 	let value: string | undefined;
 	const result = romanizeTextResult(text);
 	if (
@@ -188,14 +211,27 @@ export function romanizeText(text: string): string | undefined {
 			text.normalize("NFKC").toLocaleLowerCase()
 	)
 		value = result.text;
-	cache.set(cacheKey, value);
+	setCached(cacheKey, value);
 	return value;
 }
 
 export const romanizeLines = (lines: readonly LyricLine[]): LyricLine[] => {
-	const japaneseDocument = lines.some((line) => containsKana(line.original));
-	if (!lines.some((line) => selectRomanizer(line.original)))
+	let japaneseDocument = false;
+	let hasRomanizable = false;
+	for (let i = 0; i < lines.length; i++) {
+		const original = lines[i].original;
+		if (!japaneseDocument && containsKana(original)) {
+			japaneseDocument = true;
+		}
+		if (!hasRomanizable && selectRomanizer(original)) {
+			hasRomanizable = true;
+		}
+		if (japaneseDocument && hasRomanizable) break;
+	}
+
+	if (!hasRomanizable)
 		return lines.map((line) => ({ ...line, romanized: line.original }));
+
 	return lines.map((line) => {
 		if (
 			japaneseDocument &&
@@ -205,7 +241,8 @@ export const romanizeLines = (lines: readonly LyricLine[]): LyricLine[] => {
 		)
 			return { ...line, romanized: undefined };
 		const cacheKey = `v${ROMANIZATION_CACHE_VERSION}:mixed:${line.original}`;
-		if (cache.has(cacheKey)) return { ...line, romanized: cache.get(cacheKey) };
+		const cached = getCached(cacheKey);
+		if (cached.found) return { ...line, romanized: cached.value };
 		const result = romanizeTextResult(line.original);
 		const romanized =
 			result.status === "already-latin" ||
@@ -213,7 +250,7 @@ export const romanizeLines = (lines: readonly LyricLine[]): LyricLine[] => {
 				!areLyricsEquivalent(line.original, result.text))
 				? result.text
 				: undefined;
-		cache.set(cacheKey, romanized);
+		setCached(cacheKey, romanized);
 		return { ...line, romanized };
 	});
 };
@@ -222,12 +259,16 @@ export const romanizedDisplayText = (
 	romanized: string | undefined,
 ): string => romanized ?? original;
 
+const ZERO_WIDTH_RE = /[\u200B-\u200D\uFEFF]/gu;
+const SMART_QUOTE_RE = /[‘’]/gu;
+const MULTI_WHITESPACE_RE = /\s+/gu;
+
 export const normalizeComparableLyric = (text: string): string =>
 	text
 		.normalize("NFKC")
-		.replace(/[\u200B-\u200D\uFEFF]/gu, "")
-		.replace(/[‘’]/gu, "'")
-		.replace(/\s+/gu, " ")
+		.replace(ZERO_WIDTH_RE, "")
+		.replace(SMART_QUOTE_RE, "'")
+		.replace(MULTI_WHITESPACE_RE, " ")
 		.trim()
 		.toLocaleLowerCase();
 

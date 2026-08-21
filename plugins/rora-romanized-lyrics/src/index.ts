@@ -14,6 +14,7 @@ import { integrateRoraLyrics } from "./integration/roraLyricsIntegration";
 import { romanizeLines } from "./lyrics/romanize";
 import { calculateLivePlaybackPositionMs } from "./playback/time";
 import { TidalProvider } from "./providers/tidalProvider";
+import type { TidalLyricsPayload } from "./providers/tidalPayload";
 import { Settings } from "./settings/Settings";
 import { settings, subscribeSettings } from "./settings/settingsStore";
 import type { LyricsResult, TrackMetadata } from "./types/lyrics";
@@ -137,11 +138,15 @@ const load = async (): Promise<void> => {
 
 // The native lyrics entity can arrive after plugin startup. Reload only after
 // TIDAL has committed its success action; this does not alter playback state.
-redux.intercept("content/LOAD_ITEM_LYRICS_SUCCESS", unloads, (payload) => {
-	provider.captureLyrics(payload);
-	if (String(payload.trackId) !== currentPlaybackTrackId()) return;
-	queueMicrotask(() => void load());
-});
+redux.intercept<TidalLyricsPayload>(
+	"content/LOAD_ITEM_LYRICS_SUCCESS",
+	unloads,
+	(payload) => {
+		provider.captureLyrics(payload);
+		if (String(payload.trackId) !== currentPlaybackTrackId()) return;
+		queueMicrotask(() => void load());
+	},
+);
 
 const mount = (panel: HTMLElement): void => {
 	const existingView = panelViews.get(panel);

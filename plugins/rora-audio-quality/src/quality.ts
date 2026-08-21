@@ -74,20 +74,28 @@ export const formatQualityName = (
 	quality: TrackAudioQuality | null,
 ): string => {
 	switch (getQualityCategory(quality)) {
-		case "radio": return "Radio Quality";
-		case "cd": return "CD Quality";
-		case "dvd": return "DVD Quality";
-		case "studio": return "Studio Quality";
-		case "hi-res": return "Hi-Res";
-		case "ultra-hi-res": return "Ultra-Hi-Res";
-		default: return formatAudioQuality(quality);
+		case "radio":
+			return "Radio Quality";
+		case "cd":
+			return "CD Quality";
+		case "dvd":
+			return "DVD Quality";
+		case "studio":
+			return "Studio Quality";
+		case "hi-res":
+			return "Hi-Res";
+		case "ultra-hi-res":
+			return "Ultra-Hi-Res";
+		default:
+			return formatAudioQuality(quality);
 	}
 };
 
 export const formatQualityDisplay = (
 	quality: TrackAudioQuality | null,
 	mode: QualityDisplayMode,
-): string => mode === "name" ? formatQualityName(quality) : formatAudioQuality(quality);
+): string =>
+	mode === "name" ? formatQualityName(quality) : formatAudioQuality(quality);
 
 const labelMap: Record<string, TrackAudioQuality["qualityLabel"]> = {
 	HI_RES_LOSSLESS: "HI_RES",
@@ -138,7 +146,8 @@ export const fromPlaybackInfo = (
 		trackId,
 		bitDepth: positiveFinite(bitDepth) ? bitDepth : null,
 		sampleRateHz: positiveFinite(sampleRate) ? sampleRate : null,
-		codec: info.manifest?.codecs?.trim() || info.mimeType?.split("/").pop() || null,
+		codec:
+			info.manifest?.codecs?.trim() || info.mimeType?.split("/").pop() || null,
 		qualityLabel: labelMap[info.audioQuality ?? ""] ?? "UNKNOWN",
 		isSpatial: false,
 		source: "playback-manifest",
@@ -180,7 +189,9 @@ export const qualityAriaLabel = (quality: TrackAudioQuality | null): string => {
 export const qualityTooltip = (quality: TrackAudioQuality | null): string => {
 	if (!quality) return "Quality unavailable";
 	const lines = [`Quality: ${formatQualityLabel(quality.qualityLabel)}`];
-	if (positiveFinite(quality.bitDepth)) lines.push(`Bit Depth: ${quality.bitDepth}-bit`);
-	if (formatSampleRate(quality.sampleRateHz)) lines.push(`Sample Rate: ${formatSampleRate(quality.sampleRateHz)}`);
+	if (positiveFinite(quality.bitDepth))
+		lines.push(`Bit Depth: ${quality.bitDepth}-bit`);
+	if (formatSampleRate(quality.sampleRateHz))
+		lines.push(`Sample Rate: ${formatSampleRate(quality.sampleRateHz)}`);
 	return lines.join("\n");
 };

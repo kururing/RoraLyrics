@@ -71,12 +71,22 @@ const enqueueQualityLookup = async (
 	const cached = cache.get(trackId);
 	if (cached) return cached;
 	return requests.run(trackId, async () => {
-		const mediaItem = await MediaItem.fromId(trackId);
-		if (!mediaItem) throw new Error(`Track ${trackId} not found`);
-		const playbackInfo = await mediaItem.playbackInfo();
-		const quality = fromPlaybackInfo(trackId, playbackInfo);
-		cache.set(quality);
-		return quality;
+		const doubleCheck = cache.get(trackId);
+		if (doubleCheck) return doubleCheck;
+		try {
+			const mediaItem = await MediaItem.fromId(trackId);
+			if (!mediaItem) {
+				cache.setNegative(trackId);
+				throw new Error(`Track ${trackId} not found`);
+			}
+			const playbackInfo = await mediaItem.playbackInfo();
+			const quality = fromPlaybackInfo(trackId, playbackInfo);
+			cache.set(quality);
+			return quality;
+		} catch (error) {
+			cache.setNegative(trackId);
+			throw error;
+		}
 	});
 };
 

@@ -21,6 +21,9 @@ export interface TrackAudioQuality {
 	isSpatial: boolean;
 	source: QualitySource;
 	isConfirmed: boolean;
+	channels?: number | null;
+	bitrateKbps?: number | null;
+	fileHash?: string | null;
 }
 
 export interface CachedTrackAudioQuality {

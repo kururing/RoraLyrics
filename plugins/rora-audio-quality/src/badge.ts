@@ -19,11 +19,12 @@ export const createQualityBadge = (
 	);
 	badge.classList.add(`rora-quality-badge--${variant}`);
 	badge.dataset.qualityVariant = variant;
-	badge.textContent = display === "label"
-		? quality && quality.qualityLabel !== "UNKNOWN"
-			? formatQualityLabel(quality.qualityLabel)
-			: "—"
-		: formatQualityDisplay(quality, displayMode);
+	badge.textContent =
+		display === "label"
+			? quality && quality.qualityLabel !== "UNKNOWN"
+				? formatQualityLabel(quality.qualityLabel)
+				: "—"
+			: formatQualityDisplay(quality, displayMode);
 	badge.setAttribute("aria-label", qualityAriaLabel(quality));
 	badge.title = qualityTooltip(quality);
 	return badge;

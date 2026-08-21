@@ -50,9 +50,7 @@ export const Settings = () => {
 				title="Search quality filter"
 				desc="Show a Quality filter in music search"
 				checked={settings.enableSearchQualityFilter}
-				onChange={(_, value) =>
-					setSetting("enableSearchQualityFilter", value)
-				}
+				onChange={(_, value) => setSetting("enableSearchQualityFilter", value)}
 			/>
 		</LunaSettings>
 	);

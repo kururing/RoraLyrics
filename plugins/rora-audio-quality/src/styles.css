@@ -60,7 +60,9 @@
 }
 
 @media (max-width: 760px) {
-	.rora-quality-column { display: none; }
+	.rora-quality-column {
+		display: none;
+	}
 }
 
 .rora-search-quality-heading {

@@ -11,6 +11,11 @@ export const TRACK_TABLE_SELECTOR = 'table, div[aria-label="Tracklist"]';
 export const DURATION_SELECTOR =
 	'div[data-test="duration"], [data-test="track-duration"], [class*="_timeColumn"]';
 
+const DURATION_TIME_RE = /^\d{1,3}:\d{2}$/;
+const TRACK_HREF_RE = /\/track\/(\d+)/;
+const IMAGE_CONTAINER_RE = /image-container-track-(\d+)$/;
+const TRACKLIST_ID_RE = /tracklist-id-(\d+)-/;
+
 const findDuration = (row: HTMLElement): HTMLElement | null => {
 	const direct = row.querySelector<HTMLElement>(DURATION_SELECTOR);
 	if (direct) return direct;
@@ -19,7 +24,7 @@ const findDuration = (row: HTMLElement): HTMLElement | null => {
 	);
 	for (let index = candidates.length - 1; index >= 0; index--) {
 		const candidate = candidates[index];
-		if (candidate && /^\d{1,3}:\d{2}$/.test(candidate.textContent?.trim() ?? ""))
+		if (candidate && DURATION_TIME_RE.test(candidate.textContent?.trim() ?? ""))
 			return candidate;
 	}
 	return null;
@@ -56,19 +61,19 @@ export interface TrackListIntegrationOptions {
 
 export const getTrackId = (row: HTMLElement): string | null => {
 	const href = row.querySelector<HTMLAnchorElement>('a[href*="/track/"]')?.href;
-	const fromHref = href?.match(/\/track\/(\d+)/)?.[1];
+	const fromHref = href?.match(TRACK_HREF_RE)?.[1];
 	if (fromHref) return fromHref;
 	const direct = row.getAttribute("data-track-id");
 	if (direct) return direct;
 	const imageTest = row
 		.querySelector<HTMLElement>('[data-test^="image-container-track-"]')
 		?.getAttribute("data-test");
-	const fromImage = imageTest?.match(/image-container-track-(\d+)$/)?.[1];
+	const fromImage = imageTest?.match(IMAGE_CONTAINER_RE)?.[1];
 	if (fromImage) return fromImage;
 	const contextTest = row
 		.querySelector<HTMLElement>('[data-test^="tracklist-id-"]')
 		?.getAttribute("data-test");
-	return contextTest?.match(/tracklist-id-(\d+)-/)?.[1] ?? null;
+	return contextTest?.match(TRACKLIST_ID_RE)?.[1] ?? null;
 };
 
 export const shouldProcessTrackRow = (

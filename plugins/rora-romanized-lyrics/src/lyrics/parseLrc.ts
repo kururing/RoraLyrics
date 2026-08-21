@@ -13,19 +13,25 @@ export function parseLrc(input: string): LyricLine[] {
 		order: number;
 	}> = [];
 	let order = 0;
-	for (const raw of input.replace(/\r/g, "").split("\n")) {
+	const lines = input.split(/\r?\n/);
+	for (let i = 0; i < lines.length; i++) {
+		const raw = lines[i];
+		if (!raw || raw.indexOf("[") === -1) continue;
 		TIMESTAMP.lastIndex = 0;
 		const tags = [...raw.matchAll(TIMESTAMP)];
 		if (tags.length === 0) continue;
+		TIMESTAMP.lastIndex = 0;
 		const text = raw.replace(TIMESTAMP, "");
 		if (METADATA.test(text.trim())) continue;
-		for (const tag of tags) {
+		for (let j = 0; j < tags.length; j++) {
+			const tag = tags[j];
 			const minutes = Number(tag[1]);
 			const seconds = Number(tag[2]);
 			if (!Number.isFinite(minutes) || seconds >= 60) continue;
-			const fraction = tag[3]
-				? Number(tag[3]) *
-					(tag[3].length === 1 ? 100 : tag[3].length === 2 ? 10 : 1)
+			const fractionStr = tag[3];
+			const fraction = fractionStr
+				? Number(fractionStr) *
+					(fractionStr.length === 1 ? 100 : fractionStr.length === 2 ? 10 : 1)
 				: 0;
 			parsed.push({
 				startTimeMs: Math.max(

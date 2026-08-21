@@ -1,4 +1,4 @@
-﻿import type { LunaUnload } from "@luna/core";
+import type { LunaUnload } from "@luna/core";
 import { observe } from "@luna/lib";
 import {
 	setSetting,
@@ -188,7 +188,7 @@ export function integrateRoraLyrics(
 		const queuePlacement = (): void => {
 			if (syncButtonScanQueued || syncButtonDisposed) return;
 			syncButtonScanQueued = true;
-			queueMicrotask(() => {
+			requestAnimationFrame(() => {
 				syncButtonScanQueued = false;
 				place();
 			});
